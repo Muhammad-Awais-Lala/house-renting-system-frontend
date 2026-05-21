@@ -1,0 +1,47 @@
+[
+  {
+    "id": "1",
+    "title": "Modern Downtown Studio",
+    "price": 1200,
+    "location": "Downtown, Metropolis",
+    "size": "450 sqft",
+    "type": "Studio",
+    "description": "A sleek modern studio in the heart of the city. Perfect for young professionals.",
+    "images": ["https://picsum.photos/seed/studio1/800/600", "https://picsum.photos/seed/studio2/800/600"],
+    "landlordId": "landlord1",
+    "features": ["Gym", "WiFi", "Pet Friendly"],
+    "status": "available",
+    "lat": 40.7128,
+    "lng": -74.0060
+  },
+  {
+    "id": "2",
+    "title": "Spacious Suburban Home",
+    "price": 2500,
+    "location": "Greenwood, Metropolis",
+    "size": "2200 sqft",
+    "type": "House",
+    "description": "Lovely 3-bedroom house with a large backyard. Great for families.",
+    "images": ["https://picsum.photos/seed/house1/800/600", "https://picsum.photos/seed/house2/800/600"],
+    "landlordId": "landlord2",
+    "features": ["Garden", "Garage", "Fireplace"],
+    "status": "available",
+    "lat": 40.7306,
+    "lng": -73.9352
+  },
+  {
+    "id": "3",
+    "title": "Luxury Penthouse",
+    "price": 5000,
+    "location": "Skyline Heights, Metropolis",
+    "size": "3500 sqft",
+    "type": "Penthouse",
+    "description": "Top floor luxury with panoramic city views.",
+    "images": ["https://picsum.photos/seed/penthouse1/800/600"],
+    "landlordId": "landlord1",
+    "features": ["Pool", "Concierge", "High Ceilings"],
+    "status": "available",
+    "lat": 40.7589,
+    "lng": -73.9851
+  }
+]

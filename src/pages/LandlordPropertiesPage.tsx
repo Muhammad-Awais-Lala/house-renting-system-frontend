@@ -1,0 +1,201 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { propertyService } from '../services/api';
+import { Button } from '../components/Button';
+import { PropertyForm } from '../components/PropertyForm';
+import { 
+  Plus, 
+  MapPin, 
+  Maximize, 
+  Trash2, 
+  Edit3, 
+  MoreVertical, 
+  Search,
+  Filter,
+  Building2
+} from 'lucide-react';
+import { cn } from '../lib/utils';
+
+export default function LandlordPropertiesPage() {
+  const { user } = useAuth();
+  const [properties, setProperties] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const fetchProperties = async () => {
+    if (!user) return;
+    setIsLoading(true);
+    try {
+      const { data } = await propertyService.getAll();
+      // Filter for current landlord's properties
+      setProperties(data.filter(p => p.landlordId === user.id));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProperties();
+  }, [user]);
+
+  const handleAdd = async (data: any) => {
+    try {
+      const newProp = { ...data, landlordId: user?.id };
+      await propertyService.add(newProp);
+      await fetchProperties();
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleUpdate = async (data: any) => {
+    try {
+      await propertyService.update(editingProperty.id, data);
+      await fetchProperties();
+      setEditingProperty(null);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this listing?')) return;
+    try {
+      await propertyService.delete(id);
+      await fetchProperties();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const filteredProperties = properties.filter(p => 
+    p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    p.location.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">My Properties</h1>
+          <p className="text-slate-500 font-medium">Manage and monitor your rental listings.</p>
+        </div>
+        <Button onClick={() => setIsFormOpen(true)} className="rounded-2xl shadow-lg shadow-indigo-100 flex items-center gap-2 pr-6">
+          <Plus className="h-5 w-5" />
+          Add Property
+        </Button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
+          <input
+            type="text"
+            placeholder="Search your listings..."
+            className="w-full bg-white border-2 border-slate-100 rounded-2xl py-3 pl-11 pr-4 focus:border-indigo-600 focus:bg-white outline-none transition-all shadow-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <Button variant="ghost" className="bg-white border-2 border-slate-100 rounded-2xl px-6 flex items-center gap-2">
+          <Filter className="h-4 w-4" />
+          Filters
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-slate-50 rounded-3xl animate-pulse" />)}
+        </div>
+      ) : filteredProperties.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4">
+          {filteredProperties.map((property) => (
+            <div key={property.id} className="bg-white group rounded-3xl border-2 border-slate-50 p-4 flex flex-col md:flex-row items-center gap-6 hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-900/5 transition-all">
+              <div className="h-32 w-full md:w-32 rounded-2xl overflow-hidden shadow-inner bg-slate-100 flex-shrink-0">
+                <img src={property.images[0]} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+              </div>
+              
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-lg">
+                    {property.type}
+                  </span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span className="text-[10px] text-emerald-600 font-bold uppercase">Active</span>
+                </div>
+                <h3 className="text-xl font-black text-slate-900">{property.title}</h3>
+                <div className="flex flex-wrap items-center gap-4 text-slate-500 text-sm font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4 text-indigo-500" />
+                    {property.location}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Maximize className="h-4 w-4 text-indigo-500" />
+                    {property.size}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center md:items-end justify-center md:pr-4">
+                <div className="text-2xl font-black text-slate-900 mb-4">${property.price}<span className="text-slate-400 text-xs font-bold leading-none">/mo</span></div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-10 w-10 p-0 rounded-xl bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600"
+                    onClick={() => setEditingProperty(property)}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-10 w-10 p-0 rounded-xl bg-slate-50 text-slate-600 hover:bg-red-50 hover:text-red-600"
+                    onClick={() => handleDelete(property.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-10 w-10 p-0 rounded-xl bg-slate-50">
+                    <MoreVertical className="h-5 w-5 text-slate-400" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-100">
+          <div className="h-20 w-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Building2 className="h-10 w-10 text-slate-200" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 mb-2">No Properties Listed</h2>
+          <p className="text-slate-500 max-w-sm mx-auto mb-8">You haven't added any properties yet. Start your journey as a landlord by adding your first listing.</p>
+          <Button onClick={() => setIsFormOpen(true)} className="rounded-2xl px-8 shadow-lg shadow-indigo-100">Add First Listing</Button>
+        </div>
+      )}
+
+      {/* Forms Modals */}
+      {isFormOpen && (
+        <PropertyForm 
+          title="Add New Listing"
+          onCancel={() => setIsFormOpen(false)}
+          onSubmit={handleAdd}
+        />
+      )}
+
+      {editingProperty && (
+        <PropertyForm 
+          title="Edit Listing"
+          initialData={editingProperty}
+          onCancel={() => setEditingProperty(null)}
+          onSubmit={handleUpdate}
+        />
+      )}
+    </div>
+  );
+}

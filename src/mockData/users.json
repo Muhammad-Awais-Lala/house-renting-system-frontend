@@ -1,0 +1,23 @@
+[
+  {
+    "id": "tenant1",
+    "name": "Alex Tenant",
+    "email": "tenant@example.com",
+    "role": "tenant",
+    "avatar": "https://picsum.photos/seed/user1/100/100"
+  },
+  {
+    "id": "landlord1",
+    "name": "John Landlord",
+    "email": "landlord@example.com",
+    "role": "landlord",
+    "avatar": "https://picsum.photos/seed/user2/100/100"
+  },
+  {
+    "id": "admin1",
+    "name": "Sarah Admin",
+    "email": "admin@example.com",
+    "role": "admin",
+    "avatar": "https://picsum.photos/seed/user3/100/100"
+  }
+]
