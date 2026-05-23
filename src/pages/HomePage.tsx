@@ -39,7 +39,8 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, [searchTerm, filterType, minPrice, maxPrice]);
 
-  const propertyTypes = ['All', 'Studio', 'House', 'Penthouse', 'Apartment', '1 Bedroom', '2 Bedroom', '3 Bedroom'];
+  // Backend enum: ['apartment', 'house', 'condo', 'townhouse', 'studio', 'penthouse']
+  const propertyTypes = ['All', 'apartment', 'house', 'studio', 'penthouse', 'condo', 'townhouse'];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -99,7 +100,7 @@ export default function HomePage() {
           <button
             key={type}
             onClick={() => setFilterType(type)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shadow-sm border-2 ${filterType === type
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shadow-sm border-2 capitalize ${filterType === type
               ? 'bg-indigo-600 border-indigo-600 text-white'
               : 'bg-white border-slate-100 text-slate-600 hover:border-slate-200'
               }`}

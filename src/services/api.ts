@@ -108,30 +108,28 @@ export const propertyService = {
   },
 
   // Create new property (Landlord only)
+  // Sends JSON when no files — backend reads from req.body (no multer needed)
+  // Pass files[] only if you want Cloudinary uploads
   create: async (propertyData: any, files?: File[]) => {
-    const formData = new FormData();
-    
-    // Add property data
-    Object.keys(propertyData).forEach((key) => {
-      if (Array.isArray(propertyData[key])) {
-        propertyData[key].forEach((item: any, index: number) => {
-          formData.append(`${key}[${index}]`, item);
-        });
-      } else {
-        formData.append(key, propertyData[key]);
-      }
-    });
-
-    // Add files
     if (files && files.length > 0) {
-      files.forEach((file, index) => {
-        formData.append(`images`, file);
+      // Multipart upload with actual image files
+      const formData = new FormData();
+      Object.keys(propertyData).forEach((key) => {
+        if (Array.isArray(propertyData[key])) {
+          propertyData[key].forEach((item: any) => {
+            formData.append(key, item);
+          });
+        } else if (propertyData[key] !== null && propertyData[key] !== undefined) {
+          formData.append(key, propertyData[key]);
+        }
+      });
+      files.forEach((file) => formData.append('images', file));
+      return api.post('/properties', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
     }
-
-    return api.post('/properties', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // No files — send as plain JSON (default path)
+    return api.post('/properties', propertyData);
   },
 
   // Update property (Landlord only)
@@ -249,6 +247,19 @@ export const recommendationService = {
   // Filter properties based on criteria
   filterProperties: async (filters: any) => {
     return api.post('/recommendations/filter', filters);
+  },
+};
+
+// ============== CHAT SERVICE ==============
+export const chatService = {
+  // Get user chats
+  getUserChats: async (userId: string) => {
+    return api.get(`/chats/user/${userId}`);
+  },
+
+  // Send a message
+  sendMessage: async (chatId: string, message: any) => {
+    return api.post(`/chats/${chatId}/messages`, message);
   },
 };
 

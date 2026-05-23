@@ -22,13 +22,13 @@ export default function AdminDashboard() {
         setIsLoading(true);
         setError('');
 
-        // Fetch users data
+        // Fetch users data — backend returns { success, count, users }
         const usersResponse = await userService.getAll();
-        const totalUsers = usersResponse.data.length || 0;
+        const totalUsers = usersResponse.data.count ?? usersResponse.data.users?.length ?? 0;
 
-        // Fetch properties data
-        const propertiesResponse = await propertyService.getAll({ limit: 1000 });
-        const totalListings = propertiesResponse.data.properties?.length || propertiesResponse.data.length || 0;
+        // Fetch properties data — backend returns { success, count, total, properties }
+        const propertiesResponse = await propertyService.getAll({ limit: 1 });
+        const totalListings = propertiesResponse.data.total ?? propertiesResponse.data.count ?? 0;
 
         // Update stats
         setStats([

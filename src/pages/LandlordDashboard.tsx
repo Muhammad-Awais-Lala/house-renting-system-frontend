@@ -41,17 +41,25 @@ export default function LandlordDashboard() {
         setIsLoading(true);
         setError('');
 
-        // Fetch bookings
-        const bookingsResponse = await bookingService.getAll({ page: 1, limit: 10 });
+        // Fetch bookings — backend returns { success, count, total, bookings }
+        const bookingsResponse = await bookingService.getAll({ page: 1, limit: 50 });
         const allBookings = bookingsResponse.data.bookings || [];
         setBookings(allBookings);
 
-        // Calculate stats
+        // Fetch landlord's actual property count
+        let propCount = 0;
+        try {
+          const propsResponse = await propertyService.getLandlordProperties(user._id);
+          propCount = propsResponse.data.total ?? propsResponse.data.count ?? 0;
+        } catch { /* non-critical */ }
+
         setStats({
-           totalProperties: allBookings.length > 0 ? Math.ceil(Math.random() * 15) : 0,
-           activeBookings: allBookings.filter((b: any) => b.status === 'accepted').length,
-           totalRevenue: allBookings.reduce((sum: number, b: any) => sum + (b.totalPrice || 0), 0),
-           newRequests: allBookings.filter((b: any) => b.status === 'pending').length
+          totalProperties: propCount,
+          activeBookings: allBookings.filter((b: any) => b.status === 'accepted').length,
+          totalRevenue: allBookings
+            .filter((b: any) => b.status === 'accepted')
+            .reduce((sum: number, b: any) => sum + (b.totalPrice || 0), 0),
+          newRequests: allBookings.filter((b: any) => b.status === 'pending').length,
         });
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to load dashboard data');

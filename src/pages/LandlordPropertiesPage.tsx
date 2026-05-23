@@ -3,16 +3,19 @@ import { useAuth } from '../context/AuthContext';
 import { propertyService } from '../services/api';
 import { Button } from '../components/Button';
 import { PropertyForm } from '../components/PropertyForm';
-import { 
-  Plus, 
-  MapPin, 
-  Maximize, 
-  Trash2, 
-  Edit3, 
-  MoreVertical, 
+import {
+  Plus,
+  MapPin,
+  Maximize,
+  Trash2,
+  Edit3,
+  MoreVertical,
   Search,
   Filter,
-  Building2
+  Building2,
+  Bed,
+  Bath,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -23,16 +26,19 @@ export default function LandlordPropertiesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState('');
 
   const fetchProperties = async () => {
     if (!user) return;
     setIsLoading(true);
+    setError('');
     try {
-      const { data } = await propertyService.getAll();
-      // Filter for current landlord's properties
-      setProperties(data.filter(p => p.landlordId === user.id));
-    } catch (error) {
-      console.error(error);
+      // Use dedicated landlord endpoint instead of fetching all and filtering client-side
+      const { data } = await propertyService.getLandlordProperties(user._id);
+      setProperties(data.properties || []);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load properties');
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -43,24 +49,16 @@ export default function LandlordPropertiesPage() {
   }, [user]);
 
   const handleAdd = async (data: any) => {
-    try {
-      const newProp = { ...data, landlordId: user?.id };
-      await propertyService.add(newProp);
-      await fetchProperties();
-      setIsFormOpen(false);
-    } catch (error) {
-      console.error(error);
-    }
+    // landlordId is set server-side from req.user.id (JWT) — no need to send it
+    await propertyService.create(data);
+    await fetchProperties();
+    setIsFormOpen(false);
   };
 
   const handleUpdate = async (data: any) => {
-    try {
-      await propertyService.update(editingProperty.id, data);
-      await fetchProperties();
-      setEditingProperty(null);
-    } catch (error) {
-      console.error(error);
-    }
+    await propertyService.update(editingProperty._id, data);
+    await fetchProperties();
+    setEditingProperty(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -68,15 +66,19 @@ export default function LandlordPropertiesPage() {
     try {
       await propertyService.delete(id);
       await fetchProperties();
-    } catch (error) {
-      console.error(error);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to delete property');
     }
   };
 
-  const filteredProperties = properties.filter(p => 
-    p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.location.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProperties = properties.filter(p =>
+    (p.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.location || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Helper: get first image URL from the images array (objects with {url, publicId})
+  const getImageUrl = (property: any) =>
+    property.images?.[0]?.url || 'https://via.placeholder.com/300x200?text=No+Image';
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -90,6 +92,13 @@ export default function LandlordPropertiesPage() {
           Add Property
         </Button>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <span className="text-sm">{error}</span>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -115,18 +124,26 @@ export default function LandlordPropertiesPage() {
       ) : filteredProperties.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
           {filteredProperties.map((property) => (
-            <div key={property.id} className="bg-white group rounded-3xl border-2 border-slate-50 p-4 flex flex-col md:flex-row items-center gap-6 hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-900/5 transition-all">
+            <div key={property._id} className="bg-white group rounded-3xl border-2 border-slate-50 p-4 flex flex-col md:flex-row items-center gap-6 hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-900/5 transition-all">
               <div className="h-32 w-full md:w-32 rounded-2xl overflow-hidden shadow-inner bg-slate-100 flex-shrink-0">
-                <img src={property.images[0]} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                <img
+                  src={getImageUrl(property)}
+                  className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/128x128?text=No+Image'; }}
+                  alt={property.title}
+                />
               </div>
-              
+
               <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-lg">
-                    {property.type}
+                    {property.propertyType}
                   </span>
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] text-emerald-600 font-bold uppercase">Active</span>
+                  <span className="text-[10px] text-emerald-600 font-bold uppercase">
+                    {property.isAvailable ? 'Active' : 'Unavailable'}
+                  </span>
                 </div>
                 <h3 className="text-xl font-black text-slate-900">{property.title}</h3>
                 <div className="flex flex-wrap items-center gap-4 text-slate-500 text-sm font-medium">
@@ -136,27 +153,37 @@ export default function LandlordPropertiesPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Maximize className="h-4 w-4 text-indigo-500" />
-                    {property.size}
+                    {property.propertySize} sqft
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Bed className="h-4 w-4 text-indigo-500" />
+                    {property.bedrooms} bd
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Bath className="h-4 w-4 text-indigo-500" />
+                    {property.bathrooms} ba
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col items-center md:items-end justify-center md:pr-4">
-                <div className="text-2xl font-black text-slate-900 mb-4">${property.price}<span className="text-slate-400 text-xs font-bold leading-none">/mo</span></div>
+                <div className="text-2xl font-black text-slate-900 mb-4">
+                  ${property.price}<span className="text-slate-400 text-xs font-bold leading-none">/mo</span>
+                </div>
                 <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="h-10 w-10 p-0 rounded-xl bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600"
                     onClick={() => setEditingProperty(property)}
                   >
                     <Edit3 className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="h-10 w-10 p-0 rounded-xl bg-slate-50 text-slate-600 hover:bg-red-50 hover:text-red-600"
-                    onClick={() => handleDelete(property.id)}
+                    onClick={() => handleDelete(property._id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -174,14 +201,18 @@ export default function LandlordPropertiesPage() {
             <Building2 className="h-10 w-10 text-slate-200" />
           </div>
           <h2 className="text-2xl font-black text-slate-900 mb-2">No Properties Listed</h2>
-          <p className="text-slate-500 max-w-sm mx-auto mb-8">You haven't added any properties yet. Start your journey as a landlord by adding your first listing.</p>
-          <Button onClick={() => setIsFormOpen(true)} className="rounded-2xl px-8 shadow-lg shadow-indigo-100">Add First Listing</Button>
+          <p className="text-slate-500 max-w-sm mx-auto mb-8">
+            You haven't added any properties yet. Start your journey as a landlord by adding your first listing.
+          </p>
+          <Button onClick={() => setIsFormOpen(true)} className="rounded-2xl px-8 shadow-lg shadow-indigo-100">
+            Add First Listing
+          </Button>
         </div>
       )}
 
-      {/* Forms Modals */}
+      {/* Modal Forms */}
       {isFormOpen && (
-        <PropertyForm 
+        <PropertyForm
           title="Add New Listing"
           onCancel={() => setIsFormOpen(false)}
           onSubmit={handleAdd}
@@ -189,7 +220,7 @@ export default function LandlordPropertiesPage() {
       )}
 
       {editingProperty && (
-        <PropertyForm 
+        <PropertyForm
           title="Edit Listing"
           initialData={editingProperty}
           onCancel={() => setEditingProperty(null)}
