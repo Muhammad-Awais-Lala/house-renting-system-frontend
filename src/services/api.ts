@@ -133,7 +133,44 @@ export const propertyService = {
   },
 
   // Update property (Landlord only)
-  update: async (propertyId: string, propertyData: any) => {
+  // Sends multipart when there are new images to upload or existing ones to delete.
+  update: async (
+    propertyId: string,
+    propertyData: any,
+    newFiles?: File[],
+    deletedPublicIds?: string[],
+  ) => {
+    const hasFiles = newFiles && newFiles.length > 0;
+    const hasDeletions = deletedPublicIds && deletedPublicIds.length > 0;
+
+    if (hasFiles || hasDeletions) {
+      const formData = new FormData();
+
+      // Append scalar / array fields
+      Object.keys(propertyData).forEach((key) => {
+        if (Array.isArray(propertyData[key])) {
+          propertyData[key].forEach((item: any) => formData.append(key, item));
+        } else if (propertyData[key] !== null && propertyData[key] !== undefined) {
+          formData.append(key, propertyData[key]);
+        }
+      });
+
+      // New image files
+      if (hasFiles) {
+        newFiles!.forEach((file) => formData.append('images', file));
+      }
+
+      // Public IDs to delete from Cloudinary
+      if (hasDeletions) {
+        deletedPublicIds!.forEach((pid) => formData.append('deletedPublicIds', pid));
+      }
+
+      return api.put(`/properties/${propertyId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+
+    // Pure metadata edit — no image changes
     return api.put(`/properties/${propertyId}`, propertyData);
   },
 

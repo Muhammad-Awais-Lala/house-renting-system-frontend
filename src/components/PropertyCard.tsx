@@ -27,7 +27,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           alt={title}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           referrerPolicy="no-referrer"
-          onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image'; }}
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            if (!img.dataset.fallback) {
+              img.dataset.fallback = '1';
+              img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' fill='%23f1f5f9'%3E%3Crect width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='sans-serif' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E";
+            }
+          }}
         />
         <div className="absolute top-4 left-4">
           <span className="inline-flex rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">

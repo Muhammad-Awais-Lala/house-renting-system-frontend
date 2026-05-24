@@ -48,15 +48,15 @@ export default function LandlordPropertiesPage() {
     fetchProperties();
   }, [user]);
 
-  const handleAdd = async (data: any) => {
+  const handleAdd = async (data: any, newFiles?: File[], _deletedIds?: string[]) => {
     // landlordId is set server-side from req.user.id (JWT) — no need to send it
-    await propertyService.create(data);
+    await propertyService.create(data, newFiles);
     await fetchProperties();
     setIsFormOpen(false);
   };
 
-  const handleUpdate = async (data: any) => {
-    await propertyService.update(editingProperty._id, data);
+  const handleUpdate = async (data: any, newFiles?: File[], deletedPublicIds?: string[]) => {
+    await propertyService.update(editingProperty._id, data, newFiles, deletedPublicIds);
     await fetchProperties();
     setEditingProperty(null);
   };
@@ -76,9 +76,14 @@ export default function LandlordPropertiesPage() {
     (p.location || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Inline SVG data URI used as the "no image" placeholder – works offline,
+  // never triggers network errors, and stops the onError infinite-loop.
+  const NO_IMAGE_PLACEHOLDER =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' fill='%23f1f5f9'%3E%3Crect width='300' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='sans-serif' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E";
+
   // Helper: get first image URL from the images array (objects with {url, publicId})
   const getImageUrl = (property: any) =>
-    property.images?.[0]?.url || 'https://via.placeholder.com/300x200?text=No+Image';
+    property.images?.[0]?.url || NO_IMAGE_PLACEHOLDER;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -130,7 +135,14 @@ export default function LandlordPropertiesPage() {
                   src={getImageUrl(property)}
                   className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
                   referrerPolicy="no-referrer"
-                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/128x128?text=No+Image'; }}
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    // Guard: only replace once to prevent infinite loop
+                    if (!img.dataset.fallback) {
+                      img.dataset.fallback = '1';
+                      img.src = NO_IMAGE_PLACEHOLDER;
+                    }
+                  }}
                   alt={property.title}
                 />
               </div>

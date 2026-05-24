@@ -74,7 +74,7 @@ export default function PropertyDetailsPage() {
   const imageUrls: string[] = (property.images || [])
     .map((img: any) => (typeof img === 'string' ? img : img?.url))
     .filter(Boolean);
-  const fallback = 'https://via.placeholder.com/800x600?text=No+Image';
+  const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' fill='%23f1f5f9'%3E%3Crect width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='sans-serif' font-size='16'%3ENo Image%3C/text%3E%3C/svg%3E";
   const displayImages = imageUrls.length > 0 ? imageUrls : [fallback];
   const today = new Date().toISOString().split('T')[0];
 
@@ -94,12 +94,12 @@ export default function PropertyDetailsPage() {
         {/* Images */}
         <div className="space-y-4">
           <div className="aspect-[16/10] rounded-3xl overflow-hidden shadow-2xl shadow-indigo-100 border border-white">
-            <img src={displayImages[0]} alt={property.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { (e.target as HTMLImageElement).src = fallback; }} />
+            <img src={displayImages[0]} alt={property.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { const img = e.target as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = '1'; img.src = fallback; } }} />
           </div>
           <div className="grid grid-cols-3 gap-4">
             {displayImages.slice(1, 4).map((url: string, i: number) => (
               <div key={i} className="aspect-square rounded-2xl overflow-hidden border border-slate-100">
-                <img src={url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { (e.target as HTMLImageElement).src = fallback; }} />
+                <img src={url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { const img = e.target as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = '1'; img.src = fallback; } }} />
               </div>
             ))}
             {displayImages.length > 4 && (
