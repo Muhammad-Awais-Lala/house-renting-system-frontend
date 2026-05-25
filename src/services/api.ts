@@ -289,12 +289,15 @@ export const recommendationService = {
 
 // ============== CHAT SERVICE ==============
 export const chatService = {
-  // Get user chats
-  getUserChats: async (userId: string) => {
-    return api.get(`/chats/user/${userId}`);
+  createOrGetChat: async (propertyId: string, landlordId: string) => {
+    return api.post('/chats', { propertyId, landlordId });
   },
-
-  // Send a message
+  getUserChats: async () => {
+    return api.get('/chats');
+  },
+  getChatMessages: async (chatId: string) => {
+    return api.get(`/chats/${chatId}/messages`);
+  },
   sendMessage: async (chatId: string, message: any) => {
     return api.post(`/chats/${chatId}/messages`, message);
   },

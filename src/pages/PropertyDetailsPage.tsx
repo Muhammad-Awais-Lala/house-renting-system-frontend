@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { propertyService, bookingService, reviewService } from '../services/api';
+import { propertyService, bookingService, chatService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ChevronLeft, MapPin, Maximize, Home, Calendar, CheckCircle, AlertCircle, Info, Map as MapIcon, Star, X, Bed, Bath } from 'lucide-react';
+import { ChevronLeft, MapPin, Maximize, Home, Calendar, CheckCircle, AlertCircle, Info, Map as MapIcon, Star, X, Bed, Bath, MessageCircle } from 'lucide-react';
 import { Button } from '../components/Button';
 import { PropertyMap } from '../components/PropertyMap';
 
@@ -16,6 +16,7 @@ export default function PropertyDetailsPage() {
   const [error, setError] = useState('');
   const [isBooking, setIsBooking] = useState(false);
   const [isBooked, setIsBooked] = useState(false);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingData, setBookingData] = useState({
     checkInDate: '',
@@ -64,6 +65,27 @@ export default function PropertyDetailsPage() {
       setError(err.response?.data?.message || 'Failed to create booking');
     } finally {
       setIsBooking(false);
+    }
+  };
+
+  const handleChat = async () => {
+    if (!user) { navigate('/login'); return; }
+    if (user.role === 'landlord') {
+      setError('Landlords cannot initiate chats with themselves.');
+      return;
+    }
+    
+    setIsChatLoading(true);
+    try {
+      const landlordId = typeof property.landlordId === 'object' ? property.landlordId._id : property.landlordId;
+      const res = await chatService.createOrGetChat(property._id, landlordId);
+      if (res.data.success) {
+        navigate('/messages', { state: { activeChatId: res.data.chat._id } });
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to start chat');
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -138,10 +160,15 @@ export default function PropertyDetailsPage() {
               <span className="text-5xl font-black">Rs {property.price}</span>
               <span className="text-slate-400 font-bold text-lg">/ month</span>
             </div>
-            <div className="mt-8 relative z-10">
+            <div className="mt-8 relative z-10 flex flex-col gap-3">
               <Button className="w-full rounded-2xl py-4 bg-white text-slate-900 hover:bg-slate-100 font-black h-14" onClick={() => { if (!user) navigate('/login'); else setShowBookingModal(true); }} isLoading={isBooking} disabled={isBooked}>
                 {isBooked ? <><CheckCircle className="mr-2 h-5 w-5" />REQUESTED</> : <><Calendar className="mr-2 h-5 w-5" />BOOK VISIT</>}
               </Button>
+              {(!user || user.role === 'tenant') && (
+                <Button className="w-full rounded-2xl py-4 bg-indigo-500 hover:bg-indigo-400 text-white font-black h-14 border-none" onClick={handleChat} isLoading={isChatLoading}>
+                  <MessageCircle className="mr-2 h-5 w-5" /> CHAT WITH LANDLORD
+                </Button>
+              )}
             </div>
           </div>
 
