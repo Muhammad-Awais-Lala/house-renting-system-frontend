@@ -14,6 +14,8 @@ import PropertyDetailsPage from './pages/PropertyDetailsPage';
 import AdminDashboard from './pages/AdminDashboard';
 import LandlordPropertiesPage from './pages/LandlordPropertiesPage';
 import MapView from './pages/MapView';
+import TenantBookingsPage from './pages/TenantBookingsPage';
+import LandlordBookingsPage from './pages/LandlordBookingsPage';
 
 // Mock placeholders for missing pages
 const Placeholder = ({ name }: { name: string }) => (
@@ -45,14 +47,14 @@ function AppRoutes() {
         <Route path="map" element={<MapView />} />
         <Route path="properties/:id" element={<PropertyDetailsPage />} />
         <Route path="recommendations" element={<RecommendationPage />} />
-        <Route path="bookings" element={<Placeholder name="Booking Requests" />} />
+        <Route path="bookings" element={<TenantBookingsPage />} />
         <Route path="messages" element={<ChatPage />} />
         <Route path="reviews" element={<Placeholder name="My Reviews" />} />
 
         {/* Landlord Routes */}
         <Route path="landlord/dashboard" element={<ProtectedRoute allowedRoles={['landlord']}><LandlordDashboard /></ProtectedRoute>} />
         <Route path="landlord/properties" element={<ProtectedRoute allowedRoles={['landlord']}><LandlordPropertiesPage /></ProtectedRoute>} />
-        <Route path="landlord/bookings" element={<ProtectedRoute allowedRoles={['landlord']}><Placeholder name="Manage Requests" /></ProtectedRoute>} />
+        <Route path="landlord/bookings" element={<ProtectedRoute allowedRoles={['landlord']}><LandlordBookingsPage /></ProtectedRoute>} />
 
         {/* Admin Routes */}
         <Route path="admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

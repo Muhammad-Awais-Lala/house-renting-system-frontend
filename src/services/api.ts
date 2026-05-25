@@ -205,17 +205,17 @@ export const bookingService = {
   // Create booking request (Tenant only)
   create: async (bookingData: {
     propertyId: string;
-    checkInDate: string;
-    checkOutDate: string;
-    numberOfGuests: number;
-    message?: string;
+    moveInDate: string;
+    duration: string;
+    numberOfOccupants: number;
+    messageToLandlord?: string;
   }) => {
     return api.post('/bookings', bookingData);
   },
 
-  // Accept booking (Landlord only)
-  accept: async (bookingId: string) => {
-    return api.put(`/bookings/${bookingId}/accept`);
+  // Approve booking (Landlord only)
+  approve: async (bookingId: string) => {
+    return api.put(`/bookings/${bookingId}/approve`);
   },
 
   // Reject booking (Landlord only)

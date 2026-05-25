@@ -19,10 +19,10 @@ export default function PropertyDetailsPage() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingData, setBookingData] = useState({
-    checkInDate: '',
-    checkOutDate: '',
-    numberOfGuests: 1,
-    message: '',
+    moveInDate: '',
+    duration: '6 Months',
+    numberOfOccupants: 1,
+    messageToLandlord: '',
   });
 
   useEffect(() => {
@@ -45,18 +45,18 @@ export default function PropertyDetailsPage() {
 
   const handleBooking = async () => {
     if (!user) { navigate('/login'); return; }
-    if (!bookingData.checkInDate || !bookingData.checkOutDate) {
-      setError('Please select check-in and check-out dates');
+    if (!bookingData.moveInDate || !bookingData.duration) {
+      setError('Please select move-in date and duration');
       return;
     }
     setIsBooking(true);
     try {
       await bookingService.create({
         propertyId: id as string,
-        checkInDate: bookingData.checkInDate,
-        checkOutDate: bookingData.checkOutDate,
-        numberOfGuests: bookingData.numberOfGuests,
-        message: bookingData.message,
+        moveInDate: bookingData.moveInDate,
+        duration: bookingData.duration,
+        numberOfOccupants: bookingData.numberOfOccupants,
+        messageToLandlord: bookingData.messageToLandlord,
       });
       setIsBooked(true);
       setShowBookingModal(false);
@@ -227,20 +227,25 @@ export default function PropertyDetailsPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Check-in Date</label>
-                <input type="date" min={today} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={bookingData.checkInDate} onChange={(e) => setBookingData({ ...bookingData, checkInDate: e.target.value })} />
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Move-in Date</label>
+                <input type="date" min={today} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={bookingData.moveInDate} onChange={(e) => setBookingData({ ...bookingData, moveInDate: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Check-out Date</label>
-                <input type="date" min={bookingData.checkInDate || today} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={bookingData.checkOutDate} onChange={(e) => setBookingData({ ...bookingData, checkOutDate: e.target.value })} />
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Duration</label>
+                <select className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={bookingData.duration} onChange={(e) => setBookingData({ ...bookingData, duration: e.target.value })}>
+                  <option value="3 Months">3 Months</option>
+                  <option value="6 Months">6 Months</option>
+                  <option value="1 Year">1 Year</option>
+                  <option value="2 Years">2 Years</option>
+                </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Number of Guests</label>
-                <input type="number" min="1" className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={bookingData.numberOfGuests} onChange={(e) => setBookingData({ ...bookingData, numberOfGuests: parseInt(e.target.value) || 1 })} />
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Number of Occupants</label>
+                <input type="number" min="1" className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={bookingData.numberOfOccupants} onChange={(e) => setBookingData({ ...bookingData, numberOfOccupants: parseInt(e.target.value) || 1 })} />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Message (Optional)</label>
-                <textarea className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" rows={3} placeholder="Introduce yourself..." value={bookingData.message} onChange={(e) => setBookingData({ ...bookingData, message: e.target.value })} />
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Message to Landlord (Optional)</label>
+                <textarea className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" rows={3} placeholder="Introduce yourself..." value={bookingData.messageToLandlord} onChange={(e) => setBookingData({ ...bookingData, messageToLandlord: e.target.value })} />
               </div>
               {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
               <div className="flex gap-3 pt-4">
