@@ -135,7 +135,7 @@ export default function PropertyDetailsPage() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/20 rounded-full blur-3xl -mr-16 -mt-16" />
             <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2 relative z-10">MONTHLY RENT</p>
             <div className="flex items-baseline gap-2 relative z-10">
-              <span className="text-5xl font-black">${property.price}</span>
+              <span className="text-5xl font-black">Rs {property.price}</span>
               <span className="text-slate-400 font-bold text-lg">/ month</span>
             </div>
             <div className="mt-8 relative z-10">

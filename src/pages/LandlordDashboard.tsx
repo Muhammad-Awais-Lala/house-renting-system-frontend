@@ -97,7 +97,7 @@ export default function LandlordDashboard() {
   const statsCards = [
     { name: 'Total Properties', value: stats.totalProperties, icon: HomeIcon, color: 'text-blue-600', bg: 'bg-blue-50' },
     { name: 'Active Bookings', value: stats.activeBookings, icon: Calendar, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { name: 'Total Revenue', value: `$${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { name: 'Total Revenue', value: `Rs ${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { name: 'New Requests', value: stats.newRequests, icon: Users, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 
@@ -163,7 +163,7 @@ export default function LandlordDashboard() {
                           </p>
                        </div>
                        <div className="text-right pr-2">
-                         <p className="font-bold text-slate-900">${booking.totalPrice}</p>
+                         <p className="font-bold text-slate-900">Rs {booking.totalPrice}</p>
                          <p className="text-xs text-slate-500">{booking.numberOfGuests} guests</p>
                        </div>
                        <div className="flex items-center gap-2">

@@ -151,7 +151,7 @@ export default function MapView() {
                    {selectedProperty.location}
                 </div>
                 <div className="flex items-center justify-between">
-                   <span className="text-sm font-black text-indigo-600">${selectedProperty.price}/mo</span>
+                   <span className="text-sm font-black text-indigo-600">Rs {selectedProperty.price}/mo</span>
                    <Link 
                      to={`/properties/${selectedProperty.id}`}
                      className="bg-indigo-600 text-white p-1 rounded-md hover:bg-slate-900 transition-colors"

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Button } from './Button';
 import {
-  X, MapPin, DollarSign, Maximize, Type, Bed, Bath,
+  X, MapPin, Banknote, Maximize, Type, Bed, Bath,
   ImagePlus, Trash2, AlertCircle, CheckCircle2, Upload
 } from 'lucide-react';
 import { MapSelector } from './MapSelector';
@@ -223,10 +223,10 @@ export function PropertyForm({ initialData, onSubmit, onCancel, title }: Propert
 
             {/* Price */}
             <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Price ($ / Month)</label>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Price (PKR / Month)</label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
-                <input type="number" name="price" required min="0" placeholder="1500"
+                <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
+                <input type="number" name="price" required min="0" placeholder="50000"
                   className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-3 pl-11 pr-4 focus:bg-white focus:border-indigo-600 outline-none transition-all font-bold"
                   value={formData.price} onChange={handleChange} />
               </div>

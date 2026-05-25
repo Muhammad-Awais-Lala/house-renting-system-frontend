@@ -37,7 +37,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         />
         <div className="absolute top-4 left-4">
           <span className="inline-flex rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
-            ${price}/mo
+            Rs {price}/mo
           </span>
         </div>
         {rating !== undefined && rating > 0 && (

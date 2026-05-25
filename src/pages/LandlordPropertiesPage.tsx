@@ -180,7 +180,7 @@ export default function LandlordPropertiesPage() {
 
               <div className="flex flex-col items-center md:items-end justify-center md:pr-4">
                 <div className="text-2xl font-black text-slate-900 mb-4">
-                  ${property.price}<span className="text-slate-400 text-xs font-bold leading-none">/mo</span>
+                  Rs {property.price}<span className="text-slate-400 text-xs font-bold leading-none">/mo</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
