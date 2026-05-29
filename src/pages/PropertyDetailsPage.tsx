@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { propertyService, bookingService, chatService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ChevronLeft, MapPin, Maximize, Home, Calendar, CheckCircle, AlertCircle, Info, Map as MapIcon, Star, X, Bed, Bath, MessageCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Maximize, Home, Calendar, CheckCircle, AlertCircle, Info, Map as MapIcon, Star, X, Bed, Bath, MessageCircle } from 'lucide-react';
 import { Button } from '../components/Button';
 import { PropertyMap } from '../components/PropertyMap';
 
@@ -24,6 +24,15 @@ export default function PropertyDetailsPage() {
     numberOfOccupants: 1,
     messageToLandlord: '',
   });
+
+  // Carousel state for property images
+  const [currentImg, setCurrentImg] = useState(0);
+  const prevImg = () => {
+    setCurrentImg((prev) => (prev === 0 ? displayImages.length - 1 : prev - 1));
+  };
+  const nextImg = () => {
+    setCurrentImg((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1));
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -113,22 +122,26 @@ export default function PropertyDetailsPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        {/* Images */}
+        {/* Images Carousel */}
         <div className="space-y-4">
-          <div className="aspect-[16/10] rounded-3xl overflow-hidden shadow-2xl shadow-indigo-100 border border-white">
-            <img src={displayImages[0]} alt={property.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { const img = e.target as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = '1'; img.src = fallback; } }} />
+          <div className="relative aspect-[16/10] rounded-3xl overflow-hidden shadow-2xl shadow-indigo-100 border border-white">
+            <img src={displayImages[currentImg]} alt={property.title} className="w-full h-full object-cover transition-opacity duration-300" referrerPolicy="no-referrer" onError={(e) => { const img = e.target as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = '1'; img.src = fallback; } }} />
+            {/* Navigation arrows */}
+            <button onClick={prevImg} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 rounded-full p-2 hover:bg-white/90 transition-colors">
+              <ChevronLeft className="h-5 w-5 text-indigo-600" />
+            </button>
+            <button onClick={nextImg} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 rounded-full p-2 hover:bg-white/90 transition-colors">
+              <ChevronRight className="h-5 w-5 text-indigo-600" />
+            </button>
           </div>
-          <div className="grid grid-cols-3 gap-4">
-            {displayImages.slice(1, 4).map((url: string, i: number) => (
-              <div key={i} className="aspect-square rounded-2xl overflow-hidden border border-slate-100">
+          {/* Thumbnails */}
+          <div className="grid grid-cols-4 gap-2">
+            {displayImages.map((url: string, i: number) => (
+              <div key={i} className={`aspect-square rounded-xl overflow-hidden border ${i === currentImg ? 'border-indigo-600' : 'border-slate-200'} cursor-pointer`}
+                onClick={() => setCurrentImg(i)}>
                 <img src={url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { const img = e.target as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = '1'; img.src = fallback; } }} />
               </div>
             ))}
-            {displayImages.length > 4 && (
-              <div className="aspect-square rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 font-bold text-sm">
-                +{displayImages.length - 4} More
-              </div>
-            )}
           </div>
         </div>
 
