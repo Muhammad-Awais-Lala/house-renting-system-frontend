@@ -81,6 +81,11 @@ export const userService = {
   delete: async (userId: string) => {
     return api.delete(`/users/${userId}`);
   },
+
+  // Block / Unblock user (Admin only)
+  blockUser: async (userId: string) => {
+    return api.put(`/users/${userId}/block`);
+  },
 };
 
 // ============== PROPERTY SERVICE ==============

@@ -17,6 +17,8 @@ import MapView from './pages/MapView';
 import TenantBookingsPage from './pages/TenantBookingsPage';
 import LandlordBookingsPage from './pages/LandlordBookingsPage';
 import ProfilePage from './pages/ProfilePage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminPropertiesPage from './pages/AdminPropertiesPage';
 
 // Mock placeholders for missing pages
 const Placeholder = ({ name }: { name: string }) => (
@@ -60,8 +62,8 @@ function AppRoutes() {
 
         {/* Admin Routes */}
         <Route path="admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-        <Route path="admin/users" element={<ProtectedRoute allowedRoles={['admin']}><Placeholder name="User Management" /></ProtectedRoute>} />
-        <Route path="admin/properties" element={<ProtectedRoute allowedRoles={['admin']}><Placeholder name="Property Monitoring" /></ProtectedRoute>} />
+        <Route path="admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>} />
+        <Route path="admin/properties" element={<ProtectedRoute allowedRoles={['admin']}><AdminPropertiesPage /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
