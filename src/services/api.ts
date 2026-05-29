@@ -62,6 +62,11 @@ export const userService = {
     return api.put(`/users/${userId}`, profileData);
   },
 
+  // Change user password
+  changePassword: async (userId: string, passwordData: any) => {
+    return api.put(`/users/${userId}/password`, passwordData);
+  },
+
   // Get all users (Admin only)
   getAll: async () => {
     return api.get('/users');

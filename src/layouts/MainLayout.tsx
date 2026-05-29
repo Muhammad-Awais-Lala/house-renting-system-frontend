@@ -37,6 +37,7 @@ export default function MainLayout() {
     { name: 'AI Recommendations', href: '/recommendations', icon: Sparkles },
     { name: 'My Bookings', href: '/bookings', icon: Calendar },
     { name: 'Messages', href: '/messages', icon: MessageSquare },
+    { name: 'Profile', href: '/profile', icon: User },
   ];
 
   const landlordNav = [
@@ -44,12 +45,14 @@ export default function MainLayout() {
     { name: 'My Properties', href: '/landlord/properties', icon: Building2 },
     { name: 'Bookings', href: '/landlord/bookings', icon: Calendar },
     { name: 'Messages', href: '/messages', icon: MessageSquare },
+    { name: 'Profile', href: '/profile', icon: User },
   ];
 
   const adminNav = [
     { name: 'Overview', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Properties', href: '/admin/properties', icon: Building2 },
+    { name: 'Profile', href: '/profile', icon: User },
   ];
 
   const currentNav = user?.role === 'tenant' ? tenantNav : 

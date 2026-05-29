@@ -35,6 +35,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   clearError: () => void;
+  updateUser: (updatedUser: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -120,8 +121,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
   };
 
+  const updateUser = (updatedUser: Partial<User>) => {
+    if (user) {
+      const newUser = { ...user, ...updatedUser };
+      setUser(newUser);
+      localStorage.setItem('houseintel_user', JSON.stringify(newUser));
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, isLoading, error, clearError }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, isLoading, error, clearError, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

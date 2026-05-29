@@ -16,6 +16,7 @@ import LandlordPropertiesPage from './pages/LandlordPropertiesPage';
 import MapView from './pages/MapView';
 import TenantBookingsPage from './pages/TenantBookingsPage';
 import LandlordBookingsPage from './pages/LandlordBookingsPage';
+import ProfilePage from './pages/ProfilePage';
 
 // Mock placeholders for missing pages
 const Placeholder = ({ name }: { name: string }) => (
@@ -50,6 +51,7 @@ function AppRoutes() {
         <Route path="bookings" element={<TenantBookingsPage />} />
         <Route path="messages" element={<ChatPage />} />
         <Route path="reviews" element={<Placeholder name="My Reviews" />} />
+        <Route path="profile" element={<ProfilePage />} />
 
         {/* Landlord Routes */}
         <Route path="landlord/dashboard" element={<ProtectedRoute allowedRoles={['landlord']}><LandlordDashboard /></ProtectedRoute>} />
