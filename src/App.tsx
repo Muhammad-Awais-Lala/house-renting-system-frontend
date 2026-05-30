@@ -12,7 +12,7 @@ import RecommendationPage from './pages/RecommendationPage';
 import ChatPage from './pages/ChatPage';
 import LandlordDashboard from './pages/LandlordDashboard';
 import PropertyDetailsPage from './pages/PropertyDetailsPage';
-import AdminDashboard from './pages/AdminDashboard';
+import AdminMessagesPage from './pages/AdminMessagesPage';
 import LandlordPropertiesPage from './pages/LandlordPropertiesPage';
 import MapView from './pages/MapView';
 import TenantBookingsPage from './pages/TenantBookingsPage';
@@ -20,6 +20,7 @@ import LandlordBookingsPage from './pages/LandlordBookingsPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminPropertiesPage from './pages/AdminPropertiesPage';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Public Pages
 import LandingPage from './pages/LandingPage';
@@ -81,6 +82,7 @@ function AppRoutes() {
         <Route path="admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
         <Route path="admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>} />
         <Route path="admin/properties" element={<ProtectedRoute allowedRoles={['admin']}><AdminPropertiesPage /></ProtectedRoute>} />
+        <Route path="admin/messages" element={<ProtectedRoute allowedRoles={['admin']}><AdminMessagesPage /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

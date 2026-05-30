@@ -313,4 +313,27 @@ export const chatService = {
   },
 };
 
+// ============== INQUIRY SERVICE ==============
+export const inquiryService = {
+  // Submit contact message (Public)
+  create: async (inquiryData: { name: string; email: string; subject?: string; message: string }) => {
+    return api.post('/inquiries', inquiryData);
+  },
+
+  // Get all contact messages (Admin only)
+  getAll: async () => {
+    return api.get('/inquiries');
+  },
+
+  // Get specific message detail and mark as read (Admin only)
+  getById: async (inquiryId: string) => {
+    return api.get(`/inquiries/${inquiryId}`);
+  },
+
+  // Delete message (Admin only)
+  delete: async (inquiryId: string) => {
+    return api.delete(`/inquiries/${inquiryId}`);
+  },
+};
+
 export default api;

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send, HelpCircle, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, HelpCircle, CheckCircle, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Link } from 'react-router-dom';
+import { inquiryService } from '../services/api';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -13,19 +14,29 @@ export default function ContactPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) return;
 
     setIsSubmitting(true);
+    setError('');
 
-    // Simulate API request
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await inquiryService.create({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
+      });
       setIsSuccess(true);
       setFormData({ name: '', email: '', subject: '', message: '' });
-    }, 1500);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to send inquiry. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -108,7 +119,7 @@ export default function ContactPage() {
                 </div>
                 <h3 className="text-2xl font-black text-slate-900">Message Sent Successfully!</h3>
                 <p className="text-slate-500 text-sm font-semibold max-w-sm mx-auto">
-                  Thank you for contacting us. Our mock backend system has compiled your message. We will reach out shortly.
+                  Thank you for contacting us. Your message has been saved in our database. An administrator will review it shortly.
                 </p>
                 <div className="pt-4">
                   <Button
@@ -124,8 +135,15 @@ export default function ContactPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <h3 className="text-xl font-bold text-slate-800">Send an Inquiry</h3>
-                  <p className="text-slate-400 text-xs mt-1">Submit your name and email to send a simulated inquiry.</p>
+                  <p className="text-slate-400 text-xs mt-1">Submit your name and email to send us an inquiry.</p>
                 </div>
+
+                {error && (
+                  <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-sm text-sm animate-in fade-in duration-300">
+                    <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                    <span className="font-semibold">{error}</span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Name */}

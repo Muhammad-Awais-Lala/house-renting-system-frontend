@@ -5,7 +5,7 @@ import { Button } from '../components/Button';
 import {
   Users, Building2, ShieldCheck, ArrowUpRight,
   BarChart3, AlertCircle, TrendingUp, Home,
-  UserCheck, UserX, ChevronRight, RefreshCw
+  UserCheck, UserX, ChevronRight, RefreshCw, Mail
 } from 'lucide-react';
 
 interface Stats {
@@ -217,6 +217,7 @@ export default function AdminDashboard() {
           {[
             { label: 'Manage Users', desc: 'Block, remove or review users', href: '/admin/users', icon: Users },
             { label: 'Monitor Listings', desc: 'Review and remove properties', href: '/admin/properties', icon: Building2 },
+            { label: 'User Messages', desc: 'View contact inquiries', href: '/admin/messages', icon: Mail },
             { label: 'My Profile', desc: 'Update your admin profile', href: '/profile', icon: ShieldCheck },
           ].map(action => (
             <Link key={action.label} to={action.href}

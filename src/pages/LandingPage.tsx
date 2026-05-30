@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { 
@@ -6,6 +6,7 @@ import {
   MessageCircle, Search, Compass, Star, ArrowRight,
   TrendingUp, Users, ChevronRight, Play, CheckCircle2 
 } from 'lucide-react';
+import { propertyService } from '../services/api';
 
 const TYPE_COLORS: Record<string, string> = {
   apartment: 'bg-blue-100 text-blue-700',
@@ -53,6 +54,47 @@ const FEATURED_PROPERTIES = [
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<'tenant' | 'landlord'>('tenant');
   const [mockSearch, setMockSearch] = useState('');
+  const [properties, setProperties] = useState<any[]>([]);
+  const [totalProperties, setTotalProperties] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRealData = async () => {
+      try {
+        const res = await propertyService.getAll({ limit: 3 });
+        if (res.data && res.data.properties) {
+          setProperties(res.data.properties);
+          setTotalProperties(res.data.total || res.data.properties.length);
+        } else if (Array.isArray(res.data)) {
+          setProperties(res.data.slice(0, 3));
+          setTotalProperties(res.data.length);
+        }
+      } catch (error) {
+        console.error('Failed to fetch real properties for landing page:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRealData();
+  }, []);
+
+  const displayedProperties = properties.length > 0 ? properties : FEATURED_PROPERTIES;
+
+  const getPropertyImage = (p: any) => {
+    if (p.image) return p.image; // fallback mockup
+    const imgObj = p.images?.[0];
+    if (!imgObj) return "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=600&q=80";
+    return typeof imgObj === 'string' ? imgObj : imgObj.url || imgObj;
+  };
+
+  const getPropertyType = (p: any) => {
+    return p.propertyType || p.type || 'apartment';
+  };
+
+  const getPropertyRating = (p: any) => {
+    return p.averageRating !== undefined ? p.averageRating : p.rating || 4.8;
+  };
+
 
   return (
     <div className="overflow-hidden">
@@ -109,7 +151,7 @@ export default function LandingPage() {
               {/* Statistics */}
               <div className="grid grid-cols-3 gap-6 pt-6 border-t border-slate-100 max-w-lg mx-auto lg:mx-0">
                 <div className="text-center lg:text-left">
-                  <div className="text-2xl sm:text-3xl font-black text-indigo-600">5k+</div>
+                  <div className="text-2xl sm:text-3xl font-black text-indigo-600">{totalProperties || '12'}+</div>
                   <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">Rentals Listed</div>
                 </div>
                 <div className="text-center lg:text-left">
@@ -390,19 +432,19 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {FEATURED_PROPERTIES.map((p) => (
-              <div key={p.id} className="bg-white rounded-3xl border border-slate-200/70 overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full">
+            {displayedProperties.map((p) => (
+              <div key={p._id || p.id} className="bg-white rounded-3xl border border-slate-200/70 overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full">
                 
                 {/* Image */}
                 <div className="relative h-48 sm:h-52 overflow-hidden flex-shrink-0">
                   <img
-                    src={p.image}
+                    src={getPropertyImage(p)}
                     alt={p.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${TYPE_COLORS[p.type] || 'bg-slate-100 text-slate-700'}`}>
-                      {p.type}
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${TYPE_COLORS[getPropertyType(p)] || 'bg-slate-100 text-slate-700'}`}>
+                      {getPropertyType(p)}
                     </span>
                   </div>
                   <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-black text-indigo-700 shadow-sm">
@@ -412,8 +454,8 @@ export default function LandingPage() {
 
                 {/* Details */}
                 <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                    <MapPin className="h-3 w-3 text-indigo-500" />
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 text-ellipsis overflow-hidden whitespace-nowrap">
+                    <MapPin className="h-3 w-3 text-indigo-500 flex-shrink-0" />
                     {p.location}
                   </div>
                   <h4 className="font-extrabold text-slate-800 text-lg group-hover:text-indigo-600 transition-colors leading-snug line-clamp-1 mb-2">
@@ -427,7 +469,7 @@ export default function LandingPage() {
                   <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
                     <div className="flex items-center gap-1 font-bold text-sm text-slate-700">
                       <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      {p.rating}
+                      {getPropertyRating(p)}
                     </div>
                     <Link to="/login" className="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:underline">
                       View Details <ChevronRight className="h-3.5 w-3.5" />
