@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import MainLayout from './layouts/MainLayout';
+import PublicLayout from './layouts/PublicLayout';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -20,6 +21,12 @@ import ProfilePage from './pages/ProfilePage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminPropertiesPage from './pages/AdminPropertiesPage';
 
+// Public Pages
+import LandingPage from './pages/LandingPage';
+import AboutPage from './pages/AboutPage';
+import ServicesPage from './pages/ServicesPage';
+import ContactPage from './pages/ContactPage';
+
 // Mock placeholders for missing pages
 const Placeholder = ({ name }: { name: string }) => (
   <div className="p-12 text-center bg-white rounded-3xl border border-dashed border-slate-200">
@@ -32,7 +39,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
   const { user, isLoading } = useAuth();
   
   if (isLoading) return <div className="h-screen flex items-center justify-center font-black text-indigo-600 animate-pulse">Loading HouseIntel...</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/welcome" replace />;
   if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/" replace />;
   
   return <>{children}</>;
@@ -41,9 +48,19 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public Pages */}
+      <Route element={<PublicLayout />}>
+        <Route path="/welcome" element={<LandingPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/services" element={<ServicesPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+      </Route>
+
+      {/* Auth Pages */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       
+      {/* Authenticated Application */}
       <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         {/* Tenant Routes */}
         <Route index element={<HomePage />} />

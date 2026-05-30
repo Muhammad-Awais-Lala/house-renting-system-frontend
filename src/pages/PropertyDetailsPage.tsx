@@ -9,7 +9,7 @@ import { PropertyMap } from '../components/PropertyMap';
 export default function PropertyDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isBlocked } = useAuth();
   const [property, setProperty] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);

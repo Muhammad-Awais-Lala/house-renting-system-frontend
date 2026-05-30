@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Initialize auth from localStorage on mount
@@ -57,6 +58,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setIsLoading(false);
   }, []);
+
+  // Verify user status on mount and when token changes
+  useEffect(() => {
+    const verifyStatus = async () => {
+      if (user && user._id) {
+        try {
+          const resp = await userService.getProfile(user._id);
+          const freshUser = resp.data.user;
+          if (freshUser.isActive === false) {
+            // User is blocked
+            logout();
+            setError('You are blocked by admin');
+            setIsBlocked(true);
+          } else {
+            // Update stored user with latest data (in case of role changes etc.)
+            setUser(freshUser);
+            localStorage.setItem('houseintel_user', JSON.stringify(freshUser));
+            setIsBlocked(false);
+          }
+        } catch (err) {
+          console.error('Failed to verify user status', err);
+        }
+      }
+    };
+    verifyStatus();
+  }, [token]);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -115,6 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setUser(null);
     setError(null);
+    setIsBlocked(false);
   };
 
   const clearError = () => {
@@ -130,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, isLoading, error, clearError, updateUser }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, isBlocked, isLoading, error, clearError, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
