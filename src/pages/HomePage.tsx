@@ -8,12 +8,12 @@ export default function HomePage() {
   const [properties, setProperties] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   // Search & Filters state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
-  
+
   const [location, setLocation] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -72,8 +72,8 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button 
-            variant={showFilters ? "primary" : "outline"} 
+          <Button
+            variant={showFilters ? "primary" : "outline"}
             className="gap-2 transition-all shadow-sm relative"
             onClick={() => setShowFilters(!showFilters)}
           >
@@ -121,7 +121,7 @@ export default function HomePage() {
                 onChange={(e) => setLocation(e.target.value)}
               />
             </div>
-            
+
             {/* Price Range */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Price Range (PKR)</label>
@@ -164,7 +164,7 @@ export default function HomePage() {
                   <option value="5">5+ Bedrooms</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                  <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                  <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
                 </div>
               </div>
             </div>
@@ -188,7 +188,7 @@ export default function HomePage() {
                   <option value="4">4+ Bathrooms</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                  <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                  <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
                 </div>
               </div>
             </div>
@@ -198,10 +198,10 @@ export default function HomePage() {
               <span className="text-sm text-slate-500 font-medium">
                 {properties.length} {properties.length === 1 ? 'property' : 'properties'} found
               </span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={clearFilters} 
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
                 className="text-slate-500 hover:text-slate-800 hover:bg-slate-100 gap-2 font-medium"
               >
                 <X className="h-4 w-4" /> Clear All
@@ -217,11 +217,10 @@ export default function HomePage() {
           <button
             key={type}
             onClick={() => setFilterType(type)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shadow-sm border-2 capitalize ${
-              filterType === type
-                ? 'bg-indigo-600 border-indigo-600 text-white'
-                : 'bg-white border-slate-100 text-slate-600 hover:border-slate-200 hover:bg-slate-50'
-            }`}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shadow-sm border-2 capitalize ${filterType === type
+              ? 'bg-indigo-600 border-indigo-600 text-white'
+              : 'bg-white border-slate-100 text-slate-600 hover:border-slate-200 hover:bg-slate-50'
+              }`}
           >
             {type}
           </button>
@@ -251,6 +250,7 @@ export default function HomePage() {
               rating={property.averageRating}
             />
           ))}
+          {console.log(properties[0, 1])}
         </div>
       ) : (
         <div className="py-24 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">

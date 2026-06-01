@@ -83,7 +83,7 @@ export default function PropertyDetailsPage() {
       setError('Landlords cannot initiate chats with themselves.');
       return;
     }
-    
+
     setIsChatLoading(true);
     try {
       const landlordId = typeof property.landlordId === 'object' ? property.landlordId._id : property.landlordId;

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { inquiryService } from '../services/api';
 import { Button } from '../components/Button';
 import {
-  Mail, MessageSquare, ShieldAlert, AlertCircle, 
-  Trash2, RefreshCw, ChevronRight, X, Eye, 
+  Mail, MessageSquare, ShieldAlert, AlertCircle,
+  Trash2, RefreshCw, ChevronRight, X, Eye,
   Clock, MailOpen, ArrowLeft, Send
 } from 'lucide-react';
 
@@ -39,7 +39,7 @@ export default function AdminMessagesPage() {
       const res = await inquiryService.getById(id);
       setSelectedInquiry(res.data.inquiry);
       // Update local state to mark as read immediately
-      setInquiries(prev => 
+      setInquiries(prev =>
         prev.map(item => item._id === id ? { ...item, isRead: true } : item)
       );
     } catch (err: any) {
@@ -52,7 +52,7 @@ export default function AdminMessagesPage() {
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this message?')) return;
-    
+
     try {
       await inquiryService.delete(id);
       setInquiries(prev => prev.filter(item => item._id !== id));
@@ -72,7 +72,7 @@ export default function AdminMessagesPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -127,8 +127,8 @@ export default function AdminMessagesPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 text-sm">
                 {inquiries.map((inq) => (
-                  <tr 
-                    key={inq._id} 
+                  <tr
+                    key={inq._id}
                     onClick={() => handleOpenDetail(inq._id)}
                     className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${!inq.isRead ? 'font-bold bg-indigo-50/20' : ''}`}
                   >
@@ -148,27 +148,26 @@ export default function AdminMessagesPage() {
                       })}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                        inq.isRead 
-                          ? 'bg-slate-100 text-slate-500' 
-                          : 'bg-indigo-100 text-indigo-700'
-                      }`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${inq.isRead
+                        ? 'bg-slate-100 text-slate-500'
+                        : 'bg-indigo-100 text-indigo-700'
+                        }`}>
                         {inq.isRead ? 'Read' : 'New'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2" onClick={e => e.stopPropagation()}>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleOpenDetail(inq._id)}
                           className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600 rounded-lg"
                         >
                           <Eye className="h-4.5 w-4.5" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={(e) => handleDelete(e, inq._id)}
                           className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 rounded-lg"
                         >
@@ -188,7 +187,7 @@ export default function AdminMessagesPage() {
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden animate-in zoom-in-95 duration-200">
-            
+
             {/* Modal Header */}
             <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -200,7 +199,7 @@ export default function AdminMessagesPage() {
                   <div className="text-xs font-semibold text-slate-400">Read & Reply options</div>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={handleCloseModal}
                 className="h-8 w-8 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200/50 flex items-center justify-center transition-colors"
               >
@@ -216,7 +215,7 @@ export default function AdminMessagesPage() {
               </div>
             ) : (
               <div className="p-6 sm:p-8 space-y-6">
-                
+
                 {/* Meta details */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4.5 rounded-2xl border border-slate-100 text-xs font-semibold text-slate-600">
                   <div>
@@ -255,7 +254,7 @@ export default function AdminMessagesPage() {
 
                 {/* Buttons / CTA */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100">
-                  <a 
+                  <a
                     href={`mailto:${selectedInquiry.email}?subject=RE: ${selectedInquiry.subject || 'HouseIntel Inquiry'}`}
                     className="flex-1"
                   >
@@ -263,8 +262,8 @@ export default function AdminMessagesPage() {
                       <Send className="h-4 w-4" /> Reply via Email
                     </Button>
                   </a>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={(e) => {
                       handleDelete(e, selectedInquiry._id);
                     }}
@@ -272,8 +271,8 @@ export default function AdminMessagesPage() {
                   >
                     <Trash2 className="h-4.5 w-4.5" /> Delete message
                   </Button>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     onClick={handleCloseModal}
                     className="rounded-xl py-2.5 font-semibold text-slate-600"
                   >
