@@ -73,6 +73,7 @@ export default function LandlordDashboard() {
           .reduce((sum: number, b: any) => sum + (b.totalPrice || 0), 0),
         newRequests: allBookings.filter((b: any) => b.bookingStatus === 'pending').length,
       });
+      console.log('stats', stats);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load dashboard data');
       console.error(err);
@@ -87,7 +88,7 @@ export default function LandlordDashboard() {
 
   const handleAcceptBooking = async (bookingId: string) => {
     try {
-      await bookingService.accept(bookingId);
+      await bookingService.approve(bookingId);
       // Refresh dashboard data to update stats and bookings
       await fetchDashboardData();
     } catch (err: any) {
@@ -108,7 +109,7 @@ export default function LandlordDashboard() {
   const statsCards = [
     { name: 'Total Properties', value: stats.totalProperties, icon: HomeIcon, color: 'text-blue-600', bg: 'bg-blue-50' },
     { name: 'Active Bookings', value: stats.activeBookings, icon: Calendar, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { name: 'Total Revenue', value: `Rs ${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    // { name: 'Total Revenue', value: `Rs ${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { name: 'New Requests', value: stats.newRequests, icon: Users, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 

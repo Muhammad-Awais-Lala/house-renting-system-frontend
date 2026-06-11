@@ -250,7 +250,6 @@ export default function HomePage() {
               rating={property.averageRating}
             />
           ))}
-          {console.log(properties[0, 1])}
         </div>
       ) : (
         <div className="py-24 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">

@@ -336,4 +336,26 @@ export const inquiryService = {
   },
 };
 
+// ============== AGENT SERVICE ==============
+const AGENT_API_BASE_URL = import.meta.env.VITE_AGENT_API_URL || 'http://localhost:8000';
+
+const agentApi = axios.create({
+  baseURL: AGENT_API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const agentService = {
+  // Chat with AI rental assistant
+  chat: async (message: string, sessionId?: string) => {
+    return agentApi.post('/chat', { message, session_id: sessionId });
+  },
+
+  // Delete chat session history
+  deleteSession: async (sessionId: string) => {
+    return agentApi.delete(`/sessions/${sessionId}`);
+  },
+};
+
 export default api;

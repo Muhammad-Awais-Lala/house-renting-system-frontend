@@ -254,13 +254,12 @@ export default function AdminMessagesPage() {
 
                 {/* Buttons / CTA */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100">
+                  {/* Change this block */}
                   <a
-                    href={`mailto:${selectedInquiry.email}?subject=RE: ${selectedInquiry.subject || 'HouseIntel Inquiry'}`}
-                    className="flex-1"
+                    href={`mailto:${selectedInquiry.email}?subject=Re: ${encodeURIComponent(selectedInquiry.subject || 'Inquiry')}`}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 font-bold flex items-center justify-center gap-2"
                   >
-                    <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 font-bold flex items-center justify-center gap-2">
-                      <Send className="h-4 w-4" /> Reply via Email
-                    </Button>
+                    <Send className="h-4 w-4" /> Reply via Email
                   </a>
                   <Button
                     variant="outline"
