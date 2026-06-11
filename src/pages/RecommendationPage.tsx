@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { agentService, propertyService } from '../services/api';
-import { 
-  Sparkles, Send, BrainCircuit, AlertCircle, Trash2, 
-  TrendingUp, BarChart2, Maximize, Bed, Bath, MapPin, 
-  Info, LayoutGrid, RefreshCw, MessageSquare, PieChart
+import { agentService, propertyService, bookingService, chatService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import {
+  Sparkles, Send, BrainCircuit, AlertCircle, Trash2,
+  TrendingUp, BarChart2, Maximize, Bed, Bath, MapPin,
+  Info, LayoutGrid, RefreshCw, MessageSquare, PieChart,
+  ChevronLeft, ChevronRight, Home, Calendar, CheckCircle, Star, X, MessageCircle
 } from 'lucide-react';
 import { Button } from '../components/Button';
 
@@ -19,46 +21,165 @@ interface Message {
 export default function RecommendationPage() {
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Chat state
-  const [sessionId, setSessionId] = useState<string>('');
-  const [messages, setMessages] = useState<Message[]>([]);
+
+  // LocalStorage keys
+  const LS_MESSAGES_KEY = 'houseintel_chat_messages';
+  const LS_SESSION_KEY = 'houseintel_agent_session';
+  const LS_RECS_KEY = 'houseintel_active_recommendations';
+
+  const WELCOME_MESSAGE: Message = {
+    id: 'welcome',
+    role: 'assistant',
+    content: "Hello! I am Smith, your HouseIntel AI rental assistant. Tell me what kind of property you are looking for. You can specify details like location, price range, number of bedrooms/bathrooms, or preferred amenities. For example: \"Show me 2 BHK apartments in Gulberg under 35000.\"",
+    timestamp: new Date()
+  };
+
+  // Chat state — initialized from localStorage
+  const [sessionId, setSessionId] = useState<string>(() => {
+    const stored = localStorage.getItem(LS_SESSION_KEY);
+    if (stored) return stored;
+    const newSid = 'session_' + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem(LS_SESSION_KEY, newSid);
+    return newSid;
+  });
+
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const stored = localStorage.getItem(LS_MESSAGES_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Array<any>;
+        // Rehydrate timestamps from ISO strings back to Date objects
+        return parsed.map((m) => ({ ...m, timestamp: new Date(m.timestamp) }));
+      }
+    } catch {
+      /* ignore parse errors */
+    }
+    return [WELCOME_MESSAGE];
+  });
+
   const [inputValue, setInputValue] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
   const [chatError, setChatError] = useState<string>('');
-  
-  // Active recommendations (from the last response)
-  const [activeRecommendations, setActiveRecommendations] = useState<any[]>([]);
+
+  // Active recommendations (from the last response) — initialized from localStorage
+  const [activeRecommendations, setActiveRecommendations] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem(LS_RECS_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch { /* ignore */ }
+    return [];
+  });
 
   // Market analytics state (database aggregation)
   const [marketProperties, setMarketProperties] = useState<any[]>([]);
   const [isLoadingMarket, setIsLoadingMarket] = useState<boolean>(true);
-  
-  // UI Tabs / Dashboard view state
-  const [activeTab, setActiveTab] = useState<'recommendations' | 'market'>('market');
-  const [hoveredProperty, setHoveredProperty] = useState<any>(null);
 
-  // Initialize Session & Load Market Properties on Mount
-  useEffect(() => {
-    // Generate or retrieve session ID
-    let sid = sessionStorage.getItem('houseintel_agent_session');
-    if (!sid) {
-      sid = 'session_' + Math.random().toString(36).substring(2, 15);
-      sessionStorage.setItem('houseintel_agent_session', sid);
+  // Selected Property for Details
+  const { user } = useAuth();
+  const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const [selectedReviews, setSelectedReviews] = useState<any[]>([]);
+  const [isLoadingProperty, setIsLoadingProperty] = useState<boolean>(false);
+  const [propertyError, setPropertyError] = useState<string>('');
+
+  // Carousel state for selected property images
+  const [currentImg, setCurrentImg] = useState<number>(0);
+
+  // Booking Flow State inside details
+  const [showBookingModal, setShowBookingModal] = useState<boolean>(false);
+  const [isBooking, setIsBooking] = useState<boolean>(false);
+  const [isBooked, setIsBooked] = useState<boolean>(false);
+  const [bookingData, setBookingData] = useState({
+    moveInDate: '',
+    duration: '6 Months',
+    numberOfOccupants: 1,
+    messageToLandlord: '',
+  });
+
+  // Chat initiation with landlord
+  const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
+
+  const handleSelectProperty = async (propId: string) => {
+    try {
+      setIsLoadingProperty(true);
+      setPropertyError('');
+      setSelectedProperty(null);
+      setSelectedReviews([]);
+      setIsBooked(false);
+      
+      const response = await propertyService.getById(propId);
+      setSelectedProperty(response.data.property);
+      setSelectedReviews(response.data.reviews || []);
+      setCurrentImg(0);
+    } catch (err: any) {
+      console.error("Failed to fetch property details:", err);
+      setPropertyError(err.response?.data?.message || 'Failed to load property details.');
+    } finally {
+      setIsLoadingProperty(false);
     }
-    setSessionId(sid);
+  };
 
-    // Initial Welcome Message
-    setMessages([
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content: "Hello! I am Smith, your HouseIntel AI rental assistant. Tell me what kind of property you are looking for. You can specify details like location, price range, number of bedrooms/bathrooms, or preferred amenities. For example: \"Show me 2 BHK apartments in Gulberg under 35000.\"",
-        timestamp: new Date()
+  const handleBooking = async () => {
+    if (!user) { navigate('/login'); return; }
+    if (!bookingData.moveInDate || !bookingData.duration) {
+      setPropertyError('Please select move-in date and duration');
+      return;
+    }
+    setIsBooking(true);
+    try {
+      await bookingService.create({
+        propertyId: selectedProperty._id || selectedProperty.id,
+        moveInDate: bookingData.moveInDate,
+        duration: bookingData.duration,
+        numberOfOccupants: bookingData.numberOfOccupants,
+        messageToLandlord: bookingData.messageToLandlord,
+      });
+      setIsBooked(true);
+      setShowBookingModal(false);
+      setPropertyError('');
+    } catch (err: any) {
+      setPropertyError(err.response?.data?.message || 'Failed to create booking');
+    } finally {
+      setIsBooking(false);
+    }
+  };
+
+  const handleChat = async () => {
+    if (!user) { navigate('/login'); return; }
+    const propLandlordId = typeof selectedProperty.landlordId === 'object' ? selectedProperty.landlordId._id : selectedProperty.landlordId;
+    if (user.id === propLandlordId || user._id === propLandlordId) {
+      setPropertyError('Landlords cannot initiate chats with themselves.');
+      return;
+    }
+
+    setIsChatLoading(true);
+    try {
+      const res = await chatService.createOrGetChat(selectedProperty._id || selectedProperty.id, propLandlordId);
+      if (res.data.success) {
+        navigate('/messages', { state: { activeChatId: res.data.chat._id } });
       }
-    ]);
+    } catch (err: any) {
+      setPropertyError(err.response?.data?.message || 'Failed to start chat');
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
 
-    // Fetch whole database properties for general market analytics
+  // Persist messages to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_MESSAGES_KEY, JSON.stringify(messages));
+    } catch { /* quota exceeded — silently ignore */ }
+  }, [messages]);
+
+  // Persist active recommendations to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_RECS_KEY, JSON.stringify(activeRecommendations));
+    } catch { /* ignore */ }
+  }, [activeRecommendations]);
+
+  // Load Market Properties on Mount
+  useEffect(() => {
     fetchMarketData();
   }, []);
 
@@ -114,15 +235,14 @@ export default function RecommendationPage() {
 
       setMessages(prev => [...prev, assistantMsg]);
 
-      // If properties are returned, update active recommendations & automatically focus the analytics tab
+      // If properties are returned, update active recommendations
       if (data.properties && data.properties.length > 0) {
         setActiveRecommendations(data.properties);
-        setActiveTab('recommendations');
       }
     } catch (err: any) {
       console.error("Agent chat request failed:", err);
       setChatError(
-        err.response?.data?.detail || 
+        err.response?.data?.detail ||
         "Failed to reach the recommendation assistant. Please make sure the Agent API is running on localhost:8000."
       );
     } finally {
@@ -143,29 +263,47 @@ export default function RecommendationPage() {
 
       // Re-initialize local session
       const newSid = 'session_' + Math.random().toString(36).substring(2, 15);
-      sessionStorage.setItem('houseintel_agent_session', newSid);
+      localStorage.setItem(LS_SESSION_KEY, newSid);
       setSessionId(newSid);
 
+      // Clear localStorage chat data
+      localStorage.removeItem(LS_MESSAGES_KEY);
+      localStorage.removeItem(LS_RECS_KEY);
+
       // Reset states
-      setMessages([
-        {
-          id: 'welcome',
-          role: 'assistant',
-          content: "Conversation history cleared! Let's start fresh. What type of renting properties are you searching for today?",
-          timestamp: new Date()
-        }
-      ]);
+      const freshWelcome: Message = {
+        id: 'welcome',
+        role: 'assistant',
+        content: "Conversation history cleared! Let's start fresh. What type of renting properties are you searching for today?",
+        timestamp: new Date()
+      };
+      setMessages([freshWelcome]);
       setInputValue('');
       setChatError('');
       setActiveRecommendations([]);
-      setActiveTab('market');
+      setSelectedProperty(null);
     }
   };
 
   // Custom text formatter for chatbot markdown-like content (supports bolding and bullet lists)
   const formatMessageContent = (text: string) => {
     if (!text) return null;
-    const lines = text.split('\n');
+
+    // Strip bare URLs (http/https links) and markdown image syntax from the text
+    // so internal image links and cloudinary URLs are never shown to users.
+    const cleanText = text
+      // Remove markdown images: ![alt](url)
+      .replace(/!\[.*?\]\(https?:\/\/\S+\)/g, '')
+      // Remove markdown links that are just bare URLs: [url](url) or [text](url)
+      .replace(/\[.*?\]\(https?:\/\/\S+\)/g, '')
+      // Remove bare URLs (standalone http/https links, possibly preceded by spaces/dashes)
+      .replace(/(^|\s)(https?:\/\/\S+)/gm, '')
+      // Clean up lines that become empty after stripping
+      .split('\n')
+      .filter(line => line.trim().length > 0)
+      .join('\n');
+
+    const lines = cleanText.split('\n');
     return lines.map((line, idx) => {
       // Render unordered lists
       if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
@@ -176,7 +314,7 @@ export default function RecommendationPage() {
           </li>
         );
       }
-      
+
       // Render numbered lists
       const numMatch = line.trim().match(/^(\d+)\.\s(.*)/);
       if (numMatch) {
@@ -195,6 +333,7 @@ export default function RecommendationPage() {
       );
     });
   };
+
 
   // Sub-renderer to find **bold** tags and style them cleanly
   const renderBoldedText = (content: string) => {
@@ -257,7 +396,7 @@ export default function RecommendationPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-      
+
       {/* Visual Hub Header banner */}
       <div className="bg-gradient-to-r from-indigo-700 via-violet-700 to-purple-800 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 opacity-10 -mr-6 -mt-6">
@@ -291,10 +430,10 @@ export default function RecommendationPage() {
 
       {/* Main split-pane content */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-auto lg:h-[680px]">
-        
+
         {/* ================= LEFT COLUMN: CHAT WINDOW ================= */}
         <div className="lg:col-span-7 flex flex-col bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden h-[550px] lg:h-full">
-          
+
           {/* Chat header */}
           <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
@@ -310,7 +449,7 @@ export default function RecommendationPage() {
               </div>
             </div>
             {messages.length > 1 && (
-              <button 
+              <button
                 id="clear-chat-btn-header"
                 onClick={handleClearChat}
                 className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
@@ -324,8 +463,8 @@ export default function RecommendationPage() {
           {/* Chat Messages Body */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/30">
             {messages.map((msg) => (
-              <div 
-                key={msg.id} 
+              <div
+                key={msg.id}
                 className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {/* Bot Avatar */}
@@ -334,20 +473,20 @@ export default function RecommendationPage() {
                     <BrainCircuit className="h-4.5 w-4.5" />
                   </div>
                 )}
-                
+
                 <div className="flex flex-col max-w-[85%] sm:max-w-[75%] space-y-2">
-                  <div 
-                    className={`rounded-2xl px-4 py-3 text-sm shadow-sm ${
-                      msg.role === 'user' 
-                        ? 'bg-indigo-600 text-white font-medium rounded-tr-none' 
+                  <div
+                    className={`rounded-2xl px-4 py-3 text-sm shadow-sm ${msg.role === 'user'
+                        ? 'bg-indigo-600 text-white font-medium rounded-tr-none'
                         : 'bg-white text-slate-800 border border-slate-100 rounded-tl-none'
-                    }`}
+                      }`}
                   >
                     {msg.role === 'user' ? (
                       <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                     ) : (
                       <div className="space-y-3">
                         <div>{formatMessageContent(msg.content)}</div>
+                        {console.log(msg.content)}
                       </div>
                     )}
                   </div>
@@ -363,16 +502,16 @@ export default function RecommendationPage() {
                           const propId = property.id || property._id;
                           const imageUrl = property.images?.[0] || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' fill='%23f1f5f9'%3E%3Crect width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='sans-serif' font-size='10'%3ENo Image%3C/text%3E%3C/svg%3E";
                           return (
-                            <div 
+                            <div
                               key={propId}
                               id={`chat-prop-${propId}`}
-                              onClick={() => navigate(`/properties/${propId}`)}
+                              onClick={() => handleSelectProperty(propId)}
                               className="flex gap-3 bg-white hover:bg-slate-50 border border-slate-100 hover:border-indigo-200 rounded-xl p-2.5 shadow-sm transition-all duration-300 cursor-pointer overflow-hidden group"
                             >
                               <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100">
-                                <img 
-                                  src={imageUrl} 
-                                  alt={property.title} 
+                                <img
+                                  src={imageUrl}
+                                  alt={property.title}
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
                                 <div className="absolute bottom-1 right-1 bg-indigo-600/90 text-white text-[8px] font-black px-1.5 py-0.5 rounded">
@@ -418,7 +557,7 @@ export default function RecommendationPage() {
                       </div>
                     </div>
                   )}
-                  
+
                   <span className={`text-[9px] text-slate-400 font-medium px-1 mt-0.5 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
@@ -450,16 +589,16 @@ export default function RecommendationPage() {
                 <div className="flex-1 font-semibold">{chatError}</div>
               </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
 
           {/* Chat input form */}
-          <form 
+          <form
             onSubmit={handleSendMessage}
             className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2 items-center flex-shrink-0"
           >
-            <input 
+            <input
               id="agent-chat-input"
               type="text"
               placeholder="Ask about location, price, bedroom count..."
@@ -469,9 +608,9 @@ export default function RecommendationPage() {
               disabled={isSending}
               autoComplete="off"
             />
-            <Button 
+            <Button
               id="agent-chat-send-btn"
-              type="submit" 
+              type="submit"
               className="rounded-2xl w-12 h-11 flex items-center justify-center p-0"
               isLoading={isSending}
               disabled={!inputValue.trim()}
@@ -482,235 +621,265 @@ export default function RecommendationPage() {
 
         </div>
 
-        {/* ================= RIGHT COLUMN: ANALYTICS & CHARTS ================= */}
+        {/* ================= RIGHT COLUMN: ANALYTICS, CHARTS & PROPERTY DETAILS ================= */}
         <div className="lg:col-span-5 flex flex-col bg-white rounded-3xl border border-slate-100 p-6 shadow-xl h-full overflow-y-auto">
-          
-          {/* Tab Selector */}
-          <div className="flex bg-slate-50 p-1.5 rounded-2xl mb-6 flex-shrink-0">
-            <button
-              id="tab-btn-market"
-              onClick={() => setActiveTab('market')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-black transition-all ${
-                activeTab === 'market' 
-                  ? 'bg-white text-indigo-700 shadow-sm' 
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
-              }`}
-            >
-              <TrendingUp className="h-3.5 w-3.5" />
-              General Market Trends
-            </button>
-            <button
-              id="tab-btn-recs"
-              onClick={() => {
-                if (activeRecommendations.length > 0) {
-                  setActiveTab('recommendations');
-                }
-              }}
-              disabled={activeRecommendations.length === 0}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-black transition-all ${
-                activeRecommendations.length === 0 
-                  ? 'opacity-40 cursor-not-allowed text-slate-400' 
-                  : activeTab === 'recommendations' 
-                    ? 'bg-white text-indigo-700 shadow-sm' 
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
-              }`}
-            >
-              <BarChart2 className="h-3.5 w-3.5" />
-              Search Insights ({activeRecommendations.length})
-            </button>
-          </div>
 
-          {/* ACTIVE TAB: SEARCH RECOMMENDATIONS INSIGHTS */}
-          {activeTab === 'recommendations' && activeRecommendations.length > 0 && (
-            <div className="space-y-6 flex-1 flex flex-col animate-in fade-in duration-300">
-              
-              <div className="border-b border-slate-100 pb-4">
-                <h3 className="text-base font-black text-slate-800 flex items-center gap-1.5">
-                  <BarChart2 className="h-4.5 w-4.5 text-indigo-600" />
-                  Price Analysis (Rent/Month)
-                </h3>
-                <p className="text-xs text-slate-400">Comparing prices of recommendations returned by the AI agent.</p>
-              </div>
+          {isLoadingProperty ? (
+            <div className="py-20 text-center flex flex-col items-center justify-center gap-3 my-auto">
+              <RefreshCw className="h-8 w-8 text-indigo-600 animate-spin" />
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Property Details...</span>
+            </div>
+          ) : selectedProperty ? (
+            (() => {
+              const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' fill='%23f1f5f9'%3E%3Crect width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='sans-serif' font-size='16'%3ENo Image%3C/text%3E%3C/svg%3E";
+              const imageUrls: string[] = (selectedProperty.images || [])
+                .map((img: any) => (typeof img === 'string' ? img : img?.url))
+                .filter(Boolean);
+              const displayImages = imageUrls.length > 0 ? imageUrls : [fallback];
 
-              {/* Price comparison Bar Chart */}
-              <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center">
-                <svg width="100%" height="180" viewBox="0 0 340 180" className="overflow-visible">
-                  {/* Grid Lines */}
-                  <line x1="45" y1="20" x2="330" y2="20" stroke="#e2e8f0" strokeDasharray="3,3" />
-                  <line x1="45" y1="75" x2="330" y2="75" stroke="#e2e8f0" strokeDasharray="3,3" />
-                  <line x1="45" y1="130" x2="330" y2="130" stroke="#cbd5e1" />
+              return (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  {/* Header / Back bar */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <button
+                      onClick={() => setSelectedProperty(null)}
+                      className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-850 uppercase tracking-wider transition-colors"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Back to Market Trends
+                    </button>
+                    <button
+                      onClick={() => setSelectedProperty(null)}
+                      className="text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
 
-                  {/* Axis Text */}
-                  <text x="35" y="24" textAnchor="end" className="text-[9px] fill-slate-400 font-bold">Max</text>
-                  <text x="35" y="79" textAnchor="end" className="text-[9px] fill-slate-400 font-bold">Mid</text>
-                  <text x="35" y="134" textAnchor="end" className="text-[9px] fill-slate-400 font-bold">0</text>
-
-                  {/* Draw Bars */}
-                  {(() => {
-                    const prices = activeRecommendations.map(p => p.price);
-                    const maxVal = Math.max(...prices, 1000);
-                    const chartAreaHeight = 110; // height from y=20 to y=130
-                    const barGap = 12;
-                    const totalBarsWidth = 285;
-                    const barWidth = Math.max(15, (totalBarsWidth / activeRecommendations.length) - barGap);
-
-                    return activeRecommendations.map((p, idx) => {
-                      const barHeight = (p.price / maxVal) * chartAreaHeight;
-                      const x = 50 + idx * (barWidth + barGap);
-                      const y = 130 - barHeight;
-
-                      const isHovered = hoveredProperty?.id === (p.id || p._id);
-
-                      return (
-                        <g 
-                          key={p.id || p._id}
-                          onMouseEnter={() => setHoveredProperty(p)}
-                          onMouseLeave={() => setHoveredProperty(null)}
-                          onClick={() => navigate(`/properties/${p.id || p._id}`)}
-                          className="cursor-pointer"
-                        >
-                          {/* Animated Highlight bar */}
-                          <rect 
-                            x={x} 
-                            y={y} 
-                            width={barWidth} 
-                            height={barHeight} 
-                            rx="4" 
-                            className={`transition-all duration-300 ${
-                              isHovered ? 'fill-indigo-600' : 'fill-indigo-400'
-                            }`}
-                          />
-                          {/* Tooltip price over bar */}
-                          <text 
-                            x={x + barWidth / 2} 
-                            y={y - 6} 
-                            textAnchor="middle" 
-                            className={`text-[9px] font-black transition-all ${
-                              isHovered ? 'fill-indigo-700 font-black' : 'fill-slate-500'
-                            }`}
-                          >
-                            {p.price >= 1000 ? `${(p.price/1000).toFixed(1)}k` : p.price}
-                          </text>
-                          {/* Bottom X labels */}
-                          <text 
-                            x={x + barWidth / 2} 
-                            y="145" 
-                            textAnchor="middle" 
-                            className={`text-[8px] font-bold fill-slate-400 w-12 truncate`}
-                          >
-                            {p.title.length > 8 ? p.title.slice(0, 8) + '..' : p.title}
-                          </text>
-                        </g>
-                      );
-                    });
-                  })()}
-                </svg>
-
-                {/* Hover details display */}
-                <div className="h-12 w-full mt-2 border-t border-slate-100 pt-2 flex items-center justify-center">
-                  {hoveredProperty ? (
-                    <div className="text-center">
-                      <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full uppercase mr-2">
-                        {hoveredProperty.location}
-                      </span>
-                      <span className="text-xs font-bold text-slate-700 truncate inline-block max-w-[200px] align-middle">
-                        {hoveredProperty.title}
-                      </span>
-                      <span className="text-xs font-black text-indigo-600 ml-2">
-                        Rs {hoveredProperty.price}/mo
-                      </span>
+                  {/* Error notifications */}
+                  {propertyError && (
+                    <div className="flex items-center gap-2 p-3.5 bg-red-50 border border-red-100 rounded-2xl text-red-700 text-xs">
+                      <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                      <div className="flex-1 font-semibold">{propertyError}</div>
                     </div>
-                  ) : (
-                    <span className="text-[10px] text-slate-400 italic">Hover over the chart bars to inspect property details</span>
+                  )}
+
+                  {/* Images Carousel */}
+                  <div className="space-y-2">
+                    <div className="relative aspect-[16/10] rounded-2xl overflow-hidden shadow-md border border-slate-100 bg-slate-50">
+                      <img
+                        src={displayImages[currentImg]}
+                        alt={selectedProperty.title}
+                        className="w-full h-full object-cover transition-opacity duration-300"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          if (!img.dataset.fallback) {
+                            img.dataset.fallback = '1';
+                            img.src = fallback;
+                          }
+                        }}
+                      />
+                      {displayImages.length > 1 && (
+                        <>
+                          <button
+                            onClick={() => setCurrentImg((prev) => (prev === 0 ? displayImages.length - 1 : prev - 1))}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/85 rounded-full p-1.5 hover:bg-white transition-colors shadow-sm"
+                          >
+                            <ChevronLeft className="h-4 w-4 text-indigo-600" />
+                          </button>
+                          <button
+                            onClick={() => setCurrentImg((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1))}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/85 rounded-full p-1.5 hover:bg-white transition-colors shadow-sm"
+                          >
+                            <ChevronRight className="h-4 w-4 text-indigo-600" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Thumbnails */}
+                    {displayImages.length > 1 && (
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {displayImages.map((url: string, i: number) => (
+                          <div
+                            key={i}
+                            className={`aspect-square rounded-lg overflow-hidden border cursor-pointer ${
+                              i === currentImg ? 'border-indigo-600 ring-1 ring-indigo-600' : 'border-slate-200'
+                            }`}
+                            onClick={() => setCurrentImg(i)}
+                          >
+                            <img
+                              src={url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                const img = e.target as HTMLImageElement;
+                                if (!img.dataset.fallback) {
+                                  img.dataset.fallback = '1';
+                                  img.src = fallback;
+                                }
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Title & Stats */}
+                  <div>
+                    <div className="flex items-center gap-1.5 text-indigo-600 font-extrabold text-[10px] uppercase tracking-wider mb-2">
+                      <Home className="h-3.5 w-3.5" />
+                      {selectedProperty.propertyType} Rental
+                    </div>
+                    <h2 className="text-xl font-black text-slate-800 leading-snug">
+                      {selectedProperty.title}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-slate-500 text-xs">
+                      <span className="flex items-center gap-1 font-semibold">
+                        <MapPin className="h-3.5 w-3.5 text-indigo-500" />
+                        {selectedProperty.location}
+                      </span>
+                      <span className="flex items-center gap-1 font-semibold">
+                        <Maximize className="h-3.5 w-3.5 text-indigo-500" />
+                        {selectedProperty.propertySize} {selectedProperty.sizeUnit || 'sqft'}
+                      </span>
+                      <span className="flex items-center gap-1 font-semibold">
+                        <Bed className="h-3.5 w-3.5 text-indigo-500" />
+                        {selectedProperty.bedrooms} Beds
+                      </span>
+                      <span className="flex items-center gap-1 font-semibold">
+                        <Bath className="h-3.5 w-3.5 text-indigo-500" />
+                        {selectedProperty.bathrooms} Baths
+                      </span>
+                      {selectedProperty.averageRating > 0 && (
+                        <span className="flex items-center gap-1 font-semibold">
+                          <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                          {selectedProperty.averageRating.toFixed(1)} ({selectedProperty.totalReviews})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Price & Primary Call to Actions */}
+                  <div className="bg-slate-900 text-white p-5 rounded-2xl relative overflow-hidden shadow-inner">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-600/20 rounded-full blur-2xl -mr-12 -mt-12" />
+                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block relative z-10">
+                      Monthly Rent
+                    </span>
+                    <div className="flex items-baseline gap-1 mt-1 relative z-10">
+                      <span className="text-3xl font-black">Rs {selectedProperty.price}</span>
+                      <span className="text-slate-400 font-bold text-xs">/ month</span>
+                    </div>
+                    <div className="mt-5 relative z-10 flex flex-col gap-2.5">
+                      <Button
+                        className="w-full rounded-xl py-3 bg-white text-slate-900 hover:bg-slate-100 font-black h-11 text-xs"
+                        onClick={() => {
+                          if (!user) navigate('/login');
+                          else setShowBookingModal(true);
+                        }}
+                        isLoading={isBooking}
+                        disabled={isBooked}
+                      >
+                        {isBooked ? (
+                          <>
+                            <CheckCircle className="mr-1.5 h-4 w-4 text-emerald-600" />
+                            REQUESTED
+                          </>
+                        ) : (
+                          <>
+                            <Calendar className="mr-1.5 h-4 w-4" />
+                            BOOK VISIT
+                          </>
+                        )}
+                      </Button>
+                      {(!user || user.role === 'tenant') && (
+                        <Button
+                          className="w-full rounded-xl py-3 bg-indigo-500 hover:bg-indigo-400 text-white font-black h-11 text-xs border-none"
+                          onClick={handleChat}
+                          isLoading={isChatLoading}
+                        >
+                          <MessageCircle className="mr-1.5 h-4 w-4" />
+                          CHAT WITH LANDLORD
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                      <Info className="h-4 w-4 text-indigo-600" />
+                      About this property
+                    </h3>
+                    <p className="text-slate-600 leading-relaxed text-xs italic bg-slate-50 p-4 rounded-xl border border-slate-100/50">
+                      "{selectedProperty.description}"
+                    </p>
+                  </div>
+
+                  {/* Amenities */}
+                  {selectedProperty.amenities?.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                        Amenities
+                      </h3>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedProperty.amenities.map((a: string, idx: number) => (
+                          <span
+                            key={idx}
+                            className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-lg border border-indigo-100/50 capitalize"
+                          >
+                            {a}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Reviews */}
+                  {selectedReviews.length > 0 && (
+                    <div className="space-y-3 pt-2 border-t border-slate-100">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                        Guest Reviews
+                      </h3>
+                      <div className="space-y-3">
+                        {selectedReviews.slice(0, 3).map((review: any) => (
+                          <div key={review._id} className="p-3.5 border border-slate-200 rounded-xl bg-white text-xs">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-3 w-3 ${
+                                      i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              {review.isVerifiedTenant && (
+                                <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[8px] font-bold rounded">
+                                  Verified
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-bold text-slate-800 mb-1">{review.title}</h4>
+                            <p className="text-slate-500 leading-normal">{review.comment}</p>
+                            <p className="text-[9px] text-slate-400 mt-2 font-medium">
+                              by {review.tenantId?.firstName} {review.tenantId?.lastName}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-
-              {/* Property Sizes vs Price Scatter Plot */}
-              <div className="border-b border-slate-100 pb-2 pt-2">
-                <h3 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
-                  <Maximize className="h-4 w-4 text-purple-600" />
-                  Price vs Size Correlation
-                </h3>
-                <p className="text-xs text-slate-400">Y-Axis: Price (Rs) | X-Axis: Square footage (sqft)</p>
-              </div>
-
-              <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center">
-                <svg width="100%" height="160" viewBox="0 0 340 160" className="overflow-visible">
-                  {/* Grid Lines */}
-                  <line x1="45" y1="15" x2="330" y2="15" stroke="#f1f5f9" />
-                  <line x1="45" y1="65" x2="330" y2="65" stroke="#f1f5f9" />
-                  <line x1="45" y1="115" x2="330" y2="115" stroke="#cbd5e1" />
-                  
-                  {/* Scatter axis tags */}
-                  <text x="35" y="20" textAnchor="end" className="text-[8px] fill-slate-400 font-bold">High Price</text>
-                  <text x="35" y="119" textAnchor="end" className="text-[8px] fill-slate-400 font-bold">Low Price</text>
-                  <text x="45" y="132" textAnchor="middle" className="text-[8px] fill-slate-400 font-bold">Small Size</text>
-                  <text x="330" y="132" textAnchor="end" className="text-[8px] fill-slate-400 font-bold">Large Size</text>
-
-                  {/* Draw Scatter Dots */}
-                  {(() => {
-                    const sizes = activeRecommendations.map(p => Number(p.propertySize) || 500);
-                    const prices = activeRecommendations.map(p => p.price);
-                    
-                    const minSz = Math.min(...sizes, 300);
-                    const maxSz = Math.max(...sizes, 2500);
-                    const minPr = Math.min(...prices, 1000);
-                    const maxPr = Math.max(...prices, 10000);
-
-                    const xRange = maxSz - minSz || 1;
-                    const yRange = maxPr - minPr || 1;
-
-                    return activeRecommendations.map((p) => {
-                      const sizeVal = Number(p.propertySize) || 500;
-                      const priceVal = p.price;
-
-                      // Map coordinates to SVG bounding box: X from 60 to 310, Y from 25 to 110
-                      const xCoord = 60 + ((sizeVal - minSz) / xRange) * 240;
-                      const yCoord = 110 - ((priceVal - minPr) / yRange) * 85;
-
-                      const isHovered = hoveredProperty?.id === (p.id || p._id);
-
-                      return (
-                        <g 
-                          key={p.id || p._id}
-                          onMouseEnter={() => setHoveredProperty(p)}
-                          onMouseLeave={() => setHoveredProperty(null)}
-                          onClick={() => navigate(`/properties/${p.id || p._id}`)}
-                          className="cursor-pointer"
-                        >
-                          <circle 
-                            cx={xCoord} 
-                            cy={yCoord} 
-                            r={isHovered ? 10 : 7} 
-                            className={`transition-all duration-300 stroke-2 stroke-white ${
-                              isHovered ? 'fill-indigo-600' : 'fill-purple-500'
-                            }`}
-                          />
-                          {isHovered && (
-                            <text 
-                              x={xCoord} 
-                              y={yCoord - 14} 
-                              textAnchor="middle" 
-                              className="text-[8px] font-black fill-slate-700 bg-white"
-                            >
-                              {sizeVal} sqft / Rs {priceVal}
-                            </text>
-                          )}
-                        </g>
-                      );
-                    });
-                  })()}
-                </svg>
-              </div>
-
-            </div>
-          )}
-
-          {/* ACTIVE TAB: GENERAL MARKET ANALYTICS */}
-          {(activeTab === 'market' || activeRecommendations.length === 0) && (
+              );
+            })()
+          ) : (
             <div className="space-y-6 flex-1 flex flex-col animate-in fade-in duration-300">
-              
+
               <div className="border-b border-slate-100 pb-4">
                 <h3 className="text-base font-black text-slate-800 flex items-center gap-1.5">
                   <TrendingUp className="h-4.5 w-4.5 text-indigo-600" />
@@ -732,7 +901,7 @@ export default function RecommendationPage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  
+
                   {/* Summary Metric Card */}
                   <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100/50 p-5 rounded-2xl flex items-center justify-between">
                     <div>
@@ -750,7 +919,7 @@ export default function RecommendationPage() {
                       <MapPin className="h-3.5 w-3.5 text-indigo-500" />
                       Rent Trend by Location (Average Price)
                     </h4>
-                    
+
                     <div className="space-y-3.5 bg-slate-50/50 p-4.5 border border-slate-100 rounded-2xl">
                       {locationStats.map((loc) => {
                         const maxVal = Math.max(...locationStats.map(l => l.avgPrice), 1);
@@ -762,7 +931,7 @@ export default function RecommendationPage() {
                               <span className="text-indigo-600">Rs {Math.round(loc.avgPrice).toLocaleString()}</span>
                             </div>
                             <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                              <div 
+                              <div
                                 className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
                                 style={{ width: `${percentage}%` }}
                               />
@@ -782,8 +951,8 @@ export default function RecommendationPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       {typeStats.slice(0, 4).map((stat) => (
-                        <div 
-                          key={stat.type} 
+                        <div
+                          key={stat.type}
                           className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:shadow transition-shadow flex flex-col justify-between"
                         >
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider truncate block">
@@ -809,6 +978,81 @@ export default function RecommendationPage() {
         </div>
 
       </div>
+
+      {/* Booking modal */}
+      {showBookingModal && selectedProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-slate-800">Book Visit Request</h2>
+              <button
+                onClick={() => setShowBookingModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Move-in Date</label>
+                <input
+                  type="date"
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  value={bookingData.moveInDate}
+                  onChange={(e) => setBookingData({ ...bookingData, moveInDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Duration</label>
+                <select
+                  className="w-full px-4 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  value={bookingData.duration}
+                  onChange={(e) => setBookingData({ ...bookingData, duration: e.target.value })}
+                >
+                  <option value="3 Months">3 Months</option>
+                  <option value="6 Months">6 Months</option>
+                  <option value="1 Year">1 Year</option>
+                  <option value="2 Years">2 Years</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Number of Occupants</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="w-full px-4 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  value={bookingData.numberOfOccupants}
+                  onChange={(e) => setBookingData({ ...bookingData, numberOfOccupants: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Message to Landlord (Optional)</label>
+                <textarea
+                  className="w-full px-4 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  rows={3}
+                  placeholder="Introduce yourself to the landlord..."
+                  value={bookingData.messageToLandlord}
+                  onChange={(e) => setBookingData({ ...bookingData, messageToLandlord: e.target.value })}
+                />
+              </div>
+              {propertyError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs font-semibold">
+                  {propertyError}
+                </div>
+              )}
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setShowBookingModal(false)}>
+                  Cancel
+                </Button>
+                <Button className="flex-1" onClick={handleBooking} isLoading={isBooking}>
+                  Confirm Request
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
