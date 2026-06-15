@@ -33,8 +33,9 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!strongPasswordRegex.test(password)) {
+      setError('Password must be at least 8 characters long and include an uppercase letter, lowercase letter, number, and special character');
       return;
     }
 
@@ -153,7 +154,7 @@ export default function RegisterPage() {
                 <input
                   type="password"
                   required
-                  placeholder="Password (min. 6 chars)"
+                  placeholder="Password (min. 8 chars, strong)"
                   className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-3 pl-11 pr-4 text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 shadow-inner outline-none transition-all placeholder:text-slate-400"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
